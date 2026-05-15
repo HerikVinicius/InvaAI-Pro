@@ -55,6 +55,11 @@ const ProductSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    purchasePrice: {
+      type: Number,
+      default: 0,
+      min: [0, 'Purchase price cannot be negative'],
+    },
     defaultDiscount: { type: Number, default: 0, min: 0 },
     defaultDiscountType: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
     isActive: {

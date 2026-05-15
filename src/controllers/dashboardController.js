@@ -14,18 +14,9 @@ const getDashboardSummary = async (req, res) => {
     const inicioMesPassado = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const fimMesPassado = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-    const [
-      totalProducts,
-      criticalCount,
-      lowStockCount,
-      totalSalespersons,
-      activeSalespersons,
-      inventoryValue,
-      vendasMesAtual,
-      vendasMesPassado,
-      vendasTotais,
-      topRanking,
-    ] = await Promise.all([
+    const isLojista = req.user?.role === 'lojista';
+
+    const baseQueries = [
       TenantProduct.countDocuments({ isActive: true }),
       TenantProduct.countDocuments({ status: 'CRITICAL', isActive: true }),
       TenantProduct.countDocuments({ status: 'LOW_STOCK', isActive: true }),
@@ -81,7 +72,73 @@ const getDashboardSummary = async (req, res) => {
         { $sort: { totalVendido: -1 } },
         { $limit: 1 },
       ]),
-    ]);
+    ];
+
+    // Profit aggregation is only computed when the caller is a lojista — avoids
+    // ever materialising cost data for other roles, even server-side.
+    const profitQuery = isLojista
+      ? TenantSale.aggregate([
+          { $match: { status: 'CONCLUIDA' } },
+          { $unwind: '$items' },
+          {
+            $lookup: {
+              from: 'products',
+              localField: 'items.productId',
+              foreignField: '_id',
+              as: 'productInfo',
+            },
+          },
+          { $unwind: { path: '$productInfo', preserveNullAndEmptyArrays: true } },
+          {
+            $group: {
+              _id: null,
+              faturamento: { $sum: '$items.totalPrice' },
+              custoTotal: {
+                $sum: {
+                  $multiply: [
+                    '$items.quantity',
+                    { $ifNull: ['$productInfo.purchasePrice', 0] },
+                  ],
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              faturamento: 1,
+              custoTotal: 1,
+              lucroLiquido: { $subtract: ['$faturamento', '$custoTotal'] },
+              margemLucro: {
+                $cond: [
+                  { $gt: ['$faturamento', 0] },
+                  {
+                    $multiply: [
+                      { $divide: [{ $subtract: ['$faturamento', '$custoTotal'] }, '$faturamento'] },
+                      100,
+                    ],
+                  },
+                  0,
+                ],
+              },
+            },
+          },
+        ])
+      : Promise.resolve(null);
+
+    const [
+      totalProducts,
+      criticalCount,
+      lowStockCount,
+      totalSalespersons,
+      activeSalespersons,
+      inventoryValue,
+      vendasMesAtual,
+      vendasMesPassado,
+      vendasTotais,
+      topRanking,
+      profitResult,
+    ] = await Promise.all([...baseQueries, profitQuery]);
 
     const totalInventoryValue = inventoryValue[0]?.total ?? 0;
     const atual = vendasMesAtual[0] || { receita: 0, unidades: 0, vendas: 0 };
@@ -107,7 +164,7 @@ const getDashboardSummary = async (req, res) => {
       };
     }
 
-    return success(res, {
+    const responsePayload = {
       inventory: {
         totalSkuCount: totalProducts,
         criticalAlerts: criticalCount + lowStockCount,
@@ -131,7 +188,21 @@ const getDashboardSummary = async (req, res) => {
         variacaoReceita: Number(variacaoReceita.toFixed(1)),
         variacaoUnidades: Number(variacaoUnidades.toFixed(1)),
       },
-    });
+    };
+
+    // profitDashboard is injected ONLY for lojista — the key does not exist in the
+    // JSON for any other role, so it cannot be intercepted via the Network tab.
+    if (isLojista && profitResult?.[0]) {
+      const p = profitResult[0];
+      responsePayload.profitDashboard = {
+        faturamento: Number(p.faturamento.toFixed(2)),
+        custoTotal: Number(p.custoTotal.toFixed(2)),
+        lucroLiquido: Number(p.lucroLiquido.toFixed(2)),
+        margemLucro: Number(p.margemLucro.toFixed(1)),
+      };
+    }
+
+    return success(res, responsePayload);
   } catch (err) {
     console.error('[DashboardController] getDashboardSummary error:', err.message);
     return error(res, 'Failed to fetch dashboard summary.', 500);

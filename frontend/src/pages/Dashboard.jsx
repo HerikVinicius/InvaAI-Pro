@@ -6,6 +6,7 @@ import DashboardMetrics from '../components/dashboard/DashboardMetrics';
 import DashboardTrendChart from '../components/dashboard/DashboardTrendChart';
 import DashboardInsights from '../components/dashboard/DashboardInsights';
 import DashboardSummary from '../components/dashboard/DashboardSummary';
+import ProfitDashboard from '../components/dashboard/ProfitDashboard';
 
 export default function Dashboard() {
   const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useDashboardSummary();
@@ -35,10 +36,16 @@ export default function Dashboard() {
   const team = data?.salesTeam || {};
   const sales = data?.sales || {};
   const variacao = sales.variacaoReceita || 0;
+  // profitDashboard is only present in the API response for lojista — for other
+  // roles the key is absent entirely, so this will be undefined and ProfitDashboard
+  // renders nothing (null guard inside the component).
+  const profitDashboard = data?.profitDashboard ?? null;
 
   return (
     <div className="space-y-6 animate-fade-in">
       <DashboardMetrics sales={sales} inventory={inv} variacao={variacao} />
+
+      {profitDashboard && <ProfitDashboard profitDashboard={profitDashboard} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <DashboardTrendChart salesTrend={salesTrend} />

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Tag } from 'lucide-react';
+import { Tag, ShoppingCart } from 'lucide-react';
 import { inventoryService } from '../../services/inventoryService';
 import { useFormSubmit } from '../../hooks/useFormSubmit';
 import { validatePrice, validateQuantity, validateDiscount } from '../../constants/validation';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { useAuthStore } from '../../store/authStore';
 import TypeToggle from '../ui/TypeToggle';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -10,12 +12,16 @@ import Modal from '../ui/Modal';
 
 export default function ProductFormModal({ open, onClose, product, onSaved }) {
   const isEdit = !!product;
+  const user = useAuthStore((s) => s.user);
+  const { isLojista } = useUserPermissions(user);
+
   const [form, setForm] = useState({
     name: '', sku: '', category: '', quantity: 0, price: 0, warehouseLocation: '', description: '',
   });
   const [percentualLimite, setPercentualLimite] = useState(20);
   const [defaultDiscount, setDefaultDiscount] = useState('');
   const [defaultDiscountType, setDefaultDiscountType] = useState('percentage');
+  const [purchasePrice, setPurchasePrice] = useState('');
 
   useEffect(() => {
     if (product) {
@@ -27,11 +33,13 @@ export default function ProductFormModal({ open, onClose, product, onSaved }) {
       setPercentualLimite(product.lowStockPercent ?? 20);
       setDefaultDiscount(product.defaultDiscount != null ? String(product.defaultDiscount) : '');
       setDefaultDiscountType(product.defaultDiscountType || 'percentage');
+      setPurchasePrice(product.purchasePrice != null ? String(product.purchasePrice) : '');
     } else {
       setForm({ name: '', sku: '', category: '', quantity: 0, price: 0, warehouseLocation: '', description: '' });
       setPercentualLimite(20);
       setDefaultDiscount('');
       setDefaultDiscountType('percentage');
+      setPurchasePrice('');
     }
   }, [product, open]);
 
@@ -56,6 +64,9 @@ export default function ProductFormModal({ open, onClose, product, onSaved }) {
         lowStockPercent: percentualLimite,
         defaultDiscount: discountVal,
         defaultDiscountType,
+        // purchasePrice is only sent by lojista — the field is absent from the
+        // form for other roles so this branch never executes for them.
+        ...(isLojista && { purchasePrice: parseFloat(purchasePrice) || 0 }),
       };
 
       if (isEdit) {
@@ -90,8 +101,41 @@ export default function ProductFormModal({ open, onClose, product, onSaved }) {
           <Input label="Categoria *" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Quantidade *" type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
-            <Input label="Preço *" type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
+            <Input label="Preço de Venda *" type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
           </div>
+
+          {isLojista && (
+            <div className="flex flex-col gap-1.5">
+              <label className="label-caps flex items-center gap-1.5">
+                <ShoppingCart className="w-3 h-3 text-text-muted" />
+                Preço de Custo
+                <span className="text-text-muted font-normal normal-case ml-1">(confidencial — visível só para lojista)</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={purchasePrice}
+                onChange={(e) => setPurchasePrice(e.target.value)}
+                placeholder="Ex: 25.00"
+                className="w-full bg-background border border-border rounded-md py-2 px-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors font-mono"
+              />
+              {parseFloat(purchasePrice) > 0 && form.price > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-surface-elevated border border-border rounded-md">
+                  <ShoppingCart className="w-3 h-3 text-text-muted flex-shrink-0" />
+                  <span className="text-xs text-text-secondary">
+                    Margem bruta:
+                    <span className="font-mono font-semibold text-accent ml-1">
+                      {(((form.price - parseFloat(purchasePrice)) / form.price) * 100).toFixed(1)}%
+                    </span>
+                    <span className="text-text-muted ml-1">
+                      (lucro R$ {(form.price - parseFloat(purchasePrice)).toFixed(2)} por unidade)
+                    </span>
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Default Discount */}
           <div className="flex flex-col gap-1.5">

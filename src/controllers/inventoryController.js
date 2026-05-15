@@ -9,6 +9,13 @@ const { logInventoryChange } = require('../utils/logInventoryChange');
  */
 const getTenantProductModel = (req) => req.db.model('Product', Product.schema);
 
+/**
+ * Projection string applied to every query for non-lojista roles.
+ * purchasePrice must never reach the client-side network layer for employees.
+ */
+const COST_FIELDS_PROJECTION = '-purchasePrice';
+const canSeeCost = (req) => req.user?.role === 'lojista';
+
 const getInventory = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -26,8 +33,9 @@ const getInventory = async (req, res) => {
     }
 
     const TenantProduct = getTenantProductModel(req);
+    const projection = canSeeCost(req) ? null : COST_FIELDS_PROJECTION;
     const [products, total] = await Promise.all([
-      TenantProduct.find(filter).skip(skip).limit(limit).sort({ updatedAt: -1 }),
+      TenantProduct.find(filter, projection).skip(skip).limit(limit).sort({ updatedAt: -1 }),
       TenantProduct.countDocuments(filter),
     ]);
 
@@ -52,11 +60,18 @@ const addProduct = async (req, res) => {
       return error(res, `SKU "${sku.toUpperCase()}" already exists.`, 409);
     }
 
-    const product = await TenantProduct.create({
+    const productData = {
       name, sku, category, quantity, price, warehouseLocation, description, lowStockPercent,
       defaultDiscount: defaultDiscount ?? 0,
       defaultDiscountType: defaultDiscountType || 'percentage',
-    });
+    };
+
+    // purchasePrice is sensitive — only persisted when the authenticated user is a lojista.
+    if (canSeeCost(req) && req.body.purchasePrice !== undefined) {
+      productData.purchasePrice = Number(req.body.purchasePrice);
+    }
+
+    const product = await TenantProduct.create(productData);
 
     await logInventoryChange(req, {
       product,
@@ -67,7 +82,11 @@ const addProduct = async (req, res) => {
       changes: { name, sku, category, price, lowStockPercent },
     });
 
-    return success(res, { product }, 201);
+    // Strip cost from response for non-lojista callers (edge case: future role change mid-session).
+    const responseProduct = canSeeCost(req) ? product : product.toObject({ versionKey: false });
+    if (!canSeeCost(req)) delete responseProduct.purchasePrice;
+
+    return success(res, { product: responseProduct }, 201);
   } catch (err) {
     console.error('[InventoryController] addProduct error:', err.message);
     return error(res, err.message || 'Failed to create product.', 400);
@@ -79,6 +98,8 @@ const updateProduct = async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
     const allowed = ['name', 'category', 'quantity', 'price', 'warehouseLocation', 'description', 'lowStockPercent', 'isActive', 'defaultDiscount', 'defaultDiscountType'];
+    // purchasePrice can only be updated by lojista — silently ignored for all other roles.
+    if (canSeeCost(req)) allowed.push('purchasePrice');
     const updates = {};
     const diffs = {};
     allowed.forEach((key) => { if (req.body[key] !== undefined) updates[key] = req.body[key]; });
@@ -128,7 +149,13 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    return success(res, { product });
+    const responseProduct = canSeeCost(req) ? product : (() => {
+      const obj = product.toObject({ versionKey: false });
+      delete obj.purchasePrice;
+      return obj;
+    })();
+
+    return success(res, { product: responseProduct });
   } catch (err) {
     console.error('[InventoryController] updateProduct error:', err.message);
     return error(res, err.message || 'Failed to update product.', 400);
@@ -174,7 +201,8 @@ const getProductBySku = async (req, res) => {
   try {
     const { sku } = req.params;
     const TenantProduct = getTenantProductModel(req);
-    const product = await TenantProduct.findOne({ sku: sku.toUpperCase(), isActive: true });
+    const projection = canSeeCost(req) ? null : COST_FIELDS_PROJECTION;
+    const product = await TenantProduct.findOne({ sku: sku.toUpperCase(), isActive: true }, projection);
 
     if (!product) {
       return error(res, 'Produto não registrado.', 404);
@@ -200,21 +228,23 @@ const searchProducts = async (req, res) => {
     const TenantProduct = getTenantProductModel(req);
     const skuUpper = q.toUpperCase();
 
+    const projection = canSeeCost(req) ? null : COST_FIELDS_PROJECTION;
+
     // Exact SKU hit first (fast path — used by barcode scanners).
-    const exactSku = await TenantProduct.findOne({ sku: skuUpper, isActive: true });
+    const exactSku = await TenantProduct.findOne({ sku: skuUpper, isActive: true }, projection);
     if (exactSku) return success(res, { products: [exactSku], mode: 'sku' });
 
     // Partial name search (case-insensitive regex).
     const byName = await TenantProduct.find(
       { name: new RegExp(q, 'i'), isActive: true },
-      null,
+      projection,
       { limit: 10, sort: { name: 1 } }
     );
 
     // Also partial SKU prefix match for scanners that transmit partial codes.
     const bySku = await TenantProduct.find(
       { sku: new RegExp(`^${skuUpper}`), isActive: true, _id: { $nin: byName.map((p) => p._id) } },
-      null,
+      projection,
       { limit: 10 - byName.length }
     );
 
