@@ -20,7 +20,7 @@ export default function PaymentModal({ open, onClose, cliente, onPaid }) {
   }, [open, cliente]);
 
   const value = parseFloat(amount) || 0;
-  const isOverpay = value > cliente.saldoDevedor;
+  const isOverpay = value > (cliente?.saldoDevedor ?? 0);
 
   const { submitting, handleSubmit } = useFormSubmit(
     async () => {
