@@ -1,0 +1,23 @@
+# Ignorar Frontend - não será feito build
+frontend/
+
+# Ignorar Docker Compose - usar apenas Dockerfile
+docker-compose.yml
+docker-start.ps1
+docker-start.sh
+docker-stop.sh
+mongo-init.js
+
+# Ignorar documentação desnecessária
+DOCKER_*.md
+SECURITY.md
+SETUP.md
+SECURITY_REPORT.txt
+RESUMO_SEGURANCA.txt
+CONCLUSAO_FINAL.txt
+ENTREGA_FINAL.txt
+DEPLOY_GUIDE.txt
+
+# Ignorar pastas locais
+.claude/
+.agents/
