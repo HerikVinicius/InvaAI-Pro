@@ -63,19 +63,27 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 const start = async () => {
-  if (process.env.NODE_ENV === 'production') {
-    await connectAdminDB();
-    await migrateUsersEmailToUsername();
-  } else {
-    // Dev: conecta em background, não bloqueia startup. Migration roda quando conectar.
-    connectAdminDB()
-      .then(() => migrateUsersEmailToUsername())
-      .catch(err => console.warn('[DB] Connection failed (dev mode):', err.message));
+  if (!process.env.MONGODB_URI) {
+    console.error('[Server] FATAL: MONGODB_URI environment variable is not set.');
+    process.exit(1);
+  }
+  if (!process.env.JWT_SECRET) {
+    console.error('[Server] FATAL: JWT_SECRET environment variable is not set.');
+    process.exit(1);
   }
 
+  // Start listening first so Render's health check passes while DB connects
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Server] InvaAI Pro running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
   });
+
+  // Connect to DB after server is up
+  connectAdminDB()
+    .then(() => migrateUsersEmailToUsername())
+    .catch(err => {
+      console.error('[DB] Connection failed:', err.message);
+      process.exit(1);
+    });
 };
 
 start();
