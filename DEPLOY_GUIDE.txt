@@ -1,0 +1,221 @@
+﻿╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║                    🚀 GUIA DE DEPLOY - InvaAI Pro                          ║
+║                                                                            ║
+║              Soluções para Deploy em Render, Heroku, Railway               ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+⚠️ PROBLEMA ENCONTRADO:
+
+   Erro 128 no Render significa:
+   └─ Render não consegue fazer build de docker-compose
+   └─ Render espera um Dockerfile único na raiz
+   └─ Sua aplicação tem 3 serviços (MongoDB, Backend, Frontend)
+
+════════════════════════════════════════════════════════════════════════════
+                    OPÇÃO 1: DEPLOY SEPARADO (RECOMENDADO)
+════════════════════════════════════════════════════════════════════════════
+
+Estratégia:
+├─ Backend: Deploy no Render
+├─ Frontend: Deploy no Vercel ou Netlify
+├─ MongoDB: MongoDB Atlas (nuvem)
+
+Vantagens:
+✓ Mais barato
+✓ Mais escalável
+✓ Cada serviço pode escalar independentemente
+✓ Frontend estático no Vercel (muito rápido)
+
+Passo 1: MONGODB ATLAS (Banco de Dados na Nuvem)
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 1. Acesse: https://www.mongodb.com/cloud/atlas                          │
+│ 2. Crie uma conta (free tier disponível)                                │
+│ 3. Crie um cluster                                                       │
+│ 4. Crie um usuário de banco de dados                                     │
+│ 5. Copie a connection string                                             │
+│ 6. Substitua no .env:                                                    │
+│    MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/?appName=... │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Passo 2: BACKEND NO RENDER
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 1. Acesse: https://render.com                                           │
+│ 2. Faça login / crie conta                                              │
+│ 3. Click em "New +" > "Web Service"                                     │
+│ 4. Conecte seu repositório GitHub                                       │
+│ 5. Preencha:                                                             │
+│    - Name: invaai-backend                                               │
+│    - Environment: Node                                                   │
+│    - Build Command: npm install                                          │
+│    - Start Command: npm start                                            │
+│    - Plan: Free (ou pago)                                                │
+│ 6. Adicione Environment Variables:                                       │
+│    - MONGODB_URI = <seu-mongodb-atlas-uri>                              │
+│    - JWT_SECRET = <seu-secret-gerado>                                   │
+│    - NODE_ENV = production                                               │
+│    - ANTHROPIC_API_KEY = <sua-chave>                                    │
+│ 7. Click em "Create Web Service"                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Passo 3: FRONTEND NO VERCEL (RECOMENDADO)
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 1. Acesse: https://vercel.com                                           │
+│ 2. Faça login / crie conta                                              │
+│ 3. Click em "Add New +" > "Project"                                     │
+│ 4. Importar repositório GitHub                                          │
+│ 5. Preencha:                                                             │
+│    - Framework: Vite                                                     │
+│    - Root Directory: ./frontend                                          │
+│    - Build Command: npm run build                                        │
+│ 6. Adicione Environment Variables:                                       │
+│    - VITE_API_URL = https://seu-backend-render.onrender.com/api         │
+│ 7. Click em "Deploy"                                                     │
+└─────────────────────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════
+                    OPÇÃO 2: DEPLOY DOCKER NO RENDER
+════════════════════════════════════════════════════════════════════════════
+
+Se insistir em docker-compose no Render, crie um Dockerfile único:
+
+Arquivo: render.Dockerfile
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+FROM node:20-alpine
+
+WORKDIR /app
+RUN apk add --no-cache dumb-init
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY package*.json ./
+COPY src ./src
+
+EXPOSE 5000
+ENTRYPOINT ["/sbin/dumb-init", "--"]
+CMD ["npm", "start"]
+
+No Render:
+1. Root Directory: . (raiz)
+2. Dockerfile Path: render.Dockerfile
+3. Build Command: (deixar vazio)
+4. Start Command: (deixar vazio)
+
+⚠️ PROBLEMA: MongoDB não estará disponível!
+   └─ Você precisa usar MongoDB Atlas
+
+════════════════════════════════════════════════════════════════════════════
+                    OPÇÃO 3: DOCKER COMPOSE NO RAILWAY
+════════════════════════════════════════════════════════════════════════════
+
+Railway suporta docker-compose nativamente!
+
+Passo 1: Criar account em https://railway.app
+
+Passo 2: Novo projeto
+├─ Deploy from GitHub
+├─ Selecione seu repositório
+├─ Railway detecta docker-compose.yml automaticamente
+
+Passo 3: Adicionar variáveis de ambiente
+├─ MONGO_USER
+├─ MONGO_PASSWORD
+├─ JWT_SECRET
+├─ ANTHROPIC_API_KEY
+
+Vantagem:
+✓ Suporta docker-compose completo
+✓ MongoDB, Backend, Frontend em um único comando
+✓ Mais simples que Render
+
+════════════════════════════════════════════════════════════════════════════
+                    OPÇÃO 4: SELF-HOSTED (VPS)
+════════════════════════════════════════════════════════════════════════════
+
+Se tiver um VPS (AWS, DigitalOcean, Hetzner, etc):
+
+1. SSH na sua VPS
+2. Clone o repositório
+3. Configure as variáveis de ambiente
+4. Execute: docker-compose up -d
+
+VPS recomendados:
+├─ DigitalOcean (App Platform) - /mês
+├─ Railway - /mês
+├─ Hetzner Cloud - €2.49/mês
+└─ AWS EC2 - free tier disponível
+
+════════════════════════════════════════════════════════════════════════════
+                    COMPARAÇÃO DAS OPÇÕES
+════════════════════════════════════════════════════════════════════════════
+
+┌─────────────┬────────────┬──────────┬────────────┬──────────────┐
+│ Opção       │ Custo      │ Deploy   │ Simplicidade │ Escalabilidade │
+├─────────────┼────────────┼──────────┼────────────┼──────────────┤
+│ Deploy Sep. │ Barato     │ Fácil    │ Alta       │ Excelente    │
+│ Render      │ Gratuito   │ Difícil  │ Baixa      │ Boa          │
+│ Railway     │ Barato     │ Fácil    │ Alta       │ Excelente    │
+│ VPS         │ Médio      │ Médio    │ Média      │ Excelente    │
+└─────────────┴────────────┴──────────┴────────────┴──────────────┘
+
+RECOMENDAÇÃO: Deploy Separado (Backend Render + Frontend Vercel)
+└─ Mais barato
+└─ Mais rápido
+└─ Mais escalável
+└─ Melhor para produção
+
+════════════════════════════════════════════════════════════════════════════
+                    CONFIGURAÇÃO DE VARIÁVEIS PARA RENDER
+════════════════════════════════════════════════════════════════════════════
+
+Environment Variables no Render:
+
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/invaai_prod?retryWrites=true&w=majority
+JWT_SECRET=seu-secret-aleatorio-aqui
+ANTHROPIC_API_KEY=sk-sua-chave-aqui
+
+Gerar JWT_SECRET seguro:
+└─ Use: https://www.random.org/passwords/
+└─ Ou: openssl rand -hex 64
+
+════════════════════════════════════════════════════════════════════════════
+                    CONFIGURAÇÃO DE VARIÁVEIS PARA VERCEL
+════════════════════════════════════════════════════════════════════════════
+
+Environment Variables no Vercel:
+
+VITE_API_URL=https://seu-backend.onrender.com/api
+
+Importante:
+└─ Só coloque variáveis públicas (VITE_)
+└─ Nunca coloque JWT_SECRET ou credenciais aqui
+└─ Frontend tem acesso ao código, então qualquer var é visível
+
+════════════════════════════════════════════════════════════════════════════
+                    PRÓXIMOS PASSOS
+════════════════════════════════════════════════════════════════════════════
+
+1. Escolha uma opção (recomendo: Deploy Separado)
+2. Configure MongoDB Atlas
+3. Deploy Backend no Render
+4. Deploy Frontend no Vercel
+5. Teste a aplicação
+
+Ou alternativamente:
+
+1. Crie conta no Railway
+2. Configure docker-compose.yml
+3. Deploy automático
+
+════════════════════════════════════════════════════════════════════════════
+
+Qual opção você prefere? Posso criar arquivos específicos para cada uma!
+
