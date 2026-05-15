@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NFe>
+  <infNFe Id="NFe35220101234567890123650010000000011234567890" versao="4.00">
+    <ide>
+      <cUF>35</cUF>
+      <cNF>12345678</cNF>
+      <assinaturaQRCode>ABC123DEF456</assinaturaQRCode>
+      <CNPJ>12345678901234</CNPJ>
+      <assinaturaDigital>XYZ789</assinaturaDigital>
+    </ide>
+    <emit>
+      <CNPJ>12345678901234</CNPJ>
+      <xNome>Fornecedor Exemplo Ltda</xNome>
+      <xFant>Fornecedor</xFant>
+    </emit>
+    <det nItem="1">
+      <prod>
+        <cProd>B0876XRYGT</cProd>
+        <cEAN></cEAN>
+        <xProd>MULTIPROCESSADOR COMPACTO BMP900P PLUS 127V, BRITANIA</xProd>
+        <NCM>85094050</NCM>
+        <CFOP>5102</CFOP>
+        <uCom>un</uCom>
+        <qCom>1</qCom>
+        <vUnCom>133.00</vUnCom>
+        <vProd>133.00</vProd>
+        <indTot>1</indTot>
+      </prod>
+    </det>
+    <det nItem="2">
+      <prod>
+        <cProd>05010103937009</cProd>
+        <cEAN></cEAN>
+        <xProd>Vodka Ciroc 750ml</xProd>
+        <NCM>22086000</NCM>
+        <CFOP>5102</CFOP>
+        <uCom>un</uCom>
+        <qCom>1</qCom>
+        <vUnCom>209.90</vUnCom>
+        <vProd>209.90</vProd>
+        <indTot>1</indTot>
+      </prod>
+    </det>
+  </infNFe>
+</NFe>
