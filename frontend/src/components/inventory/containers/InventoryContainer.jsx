@@ -12,7 +12,7 @@ export default function InventoryContainer() {
   const [importOpen, setImportOpen] = useState(false);
 
   const inventoryData = useInventoryData();
-  const { products, pagination, loading, canWrite, criticalCount, lowStock, setLowStock, reload } = inventoryData;
+  const { products, pagination, loading, canWrite, isLojista, criticalCount, lowStock, setLowStock, noCostPrice, setNoCostPrice, reload } = inventoryData;
 
   const handlePrint = () => window.print();
 
@@ -32,9 +32,12 @@ export default function InventoryContainer() {
     pagination,
     loading,
     canWrite,
+    isLojista,
     criticalCount,
     lowStock,
+    noCostPrice,
     onLowStockToggle: () => setLowStock((v) => !v),
+    onNoCostPriceToggle: () => setNoCostPrice((v) => !v),
     onPrint: handlePrint,
     onCreateClick: () => { setEditing(null); setModalOpen(true); },
     onEditClick: (product) => { setEditing(product); setModalOpen(true); },

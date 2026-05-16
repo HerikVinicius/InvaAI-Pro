@@ -1,4 +1,4 @@
-import { Plus, Upload, AlertTriangle, Printer } from 'lucide-react';
+import { Plus, Upload, AlertTriangle, Printer, Tag } from 'lucide-react';
 import Button from '../../ui/Button';
 import InventorySummary from '../components/InventorySummary';
 import InventoryTable from '../components/InventoryTable';
@@ -8,9 +8,12 @@ export default function InventoryPage({
   pagination,
   loading,
   canWrite,
+  isLojista,
   criticalCount,
   lowStock,
+  noCostPrice,
   onLowStockToggle,
+  onNoCostPriceToggle,
   onPrint,
   onCreateClick,
   onEditClick,
@@ -67,6 +70,25 @@ export default function InventoryPage({
           )}
         </button>
 
+        {isLojista && (
+          <button
+            onClick={onNoCostPriceToggle}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${
+              noCostPrice
+                ? 'bg-violet-500/15 border-violet-500/50 text-violet-300'
+                : 'bg-surface border-border text-text-secondary hover:border-violet-500/40 hover:text-violet-300'
+            }`}
+          >
+            <Tag className="w-3.5 h-3.5" />
+            Sem preço de custo
+            {noCostPrice && (
+              <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/20 font-semibold">
+                {pagination.total}
+              </span>
+            )}
+          </button>
+        )}
+
         <button
           onClick={onPrint}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-surface text-text-secondary hover:text-accent hover:border-accent/40 text-sm font-medium transition-colors ml-auto"
@@ -79,7 +101,7 @@ export default function InventoryPage({
       {/* Cabeçalho visível apenas na impressão */}
       <div className="hidden print:block mb-4">
         <h1 className="text-lg font-bold">
-          Relatório de Estoque{lowStock ? ' — Produtos Esgotando' : ''}
+          Relatório de Estoque{lowStock ? ' — Produtos Esgotando' : noCostPrice ? ' — Sem Preço de Custo' : ''}
         </h1>
         <p className="text-xs text-gray-500">
           Gerado em {new Date().toLocaleString('pt-BR')} · {pagination.total} produto(s)
@@ -92,6 +114,7 @@ export default function InventoryPage({
         loading={loading}
         canWrite={canWrite}
         lowStock={lowStock}
+        noCostPrice={noCostPrice}
         onEditClick={onEditClick}
         onLogsClick={onLogsClick}
         onPageChange={onPageChange}

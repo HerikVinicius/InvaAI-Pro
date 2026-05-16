@@ -8,11 +8,14 @@ export default function InventoryTable({
   loading,
   canWrite,
   lowStock,
+  noCostPrice,
   onEditClick,
   onLogsClick,
   onPageChange,
 }) {
-  const emptyMessage = lowStock
+  const emptyMessage = noCostPrice
+    ? 'Todos os produtos já possuem preço de custo cadastrado.'
+    : lowStock
     ? 'Nenhum produto com estoque abaixo do limite de aviso.'
     : canWrite
     ? 'Nenhum produto ainda. Clique em "Adicionar Produto" para começar.'

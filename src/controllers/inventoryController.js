@@ -32,6 +32,15 @@ const getInventory = async (req, res) => {
       filter.status = req.query.status.toUpperCase();
     }
 
+    // noCostPrice=true retorna apenas produtos sem preço de custo (lojista only).
+    if (req.query.noCostPrice === 'true' && canSeeCost(req)) {
+      filter.$or = [
+        { purchasePrice: { $exists: false } },
+        { purchasePrice: null },
+        { purchasePrice: 0 },
+      ];
+    }
+
     if (req.query.category) filter.category = new RegExp(req.query.category, 'i');
     if (req.query.search) {
       filter.$or = [

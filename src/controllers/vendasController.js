@@ -655,15 +655,61 @@ const getStats = async (req, res) => {
       anteriorLabel = 'mesPassado';
     }
 
-    const [totalGeral, atualArr, anteriorArr] = await Promise.all([
+    // Lucro estimado: apenas lojista recebe este dado.
+    // Faz lookup no Product para pegar purchasePrice atual de cada item.
+    let lucroPromise = Promise.resolve([]);
+    if (req.user?.role === 'lojista') {
+      const { Product: TenantProduct } = getModels(req);
+      const lucroMatch = range
+        ? { status: 'CONCLUIDA', createdAt: { $gte: range.from, $lte: range.to } }
+        : (() => {
+            const now = new Date();
+            return { status: 'CONCLUIDA', createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) } };
+          })();
+      lucroPromise = TenantSale.aggregate([
+        { $match: lucroMatch },
+        { $unwind: '$items' },
+        {
+          $lookup: {
+            from: TenantProduct.collection.name,
+            localField: 'items.sku',
+            foreignField: 'sku',
+            as: '_product',
+            pipeline: [{ $project: { purchasePrice: 1 } }],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            lucro: {
+              $sum: {
+                $multiply: [
+                  {
+                    $subtract: [
+                      '$items.unitPrice',
+                      { $ifNull: [{ $arrayElemAt: ['$_product.purchasePrice', 0] }, 0] },
+                    ],
+                  },
+                  '$items.quantity',
+                ],
+              },
+            },
+          },
+        },
+      ]);
+    }
+
+    const [totalGeral, atualArr, anteriorArr, lucroArr] = await Promise.all([
       totalGeralPromise,
       periodoAtual,
       periodoAnterior,
+      lucroPromise,
     ]);
 
     const total = totalGeral[0] || { receita: 0, unidades: 0, quantidadeVendas: 0 };
     const atual = atualArr[0] || { receita: 0, unidades: 0, quantidadeVendas: 0 };
     const passado = anteriorArr[0] || { receita: 0, unidades: 0, quantidadeVendas: 0 };
+    const lucroEstimado = req.user?.role === 'lojista' ? (lucroArr[0]?.lucro || 0) : undefined;
 
     const variacaoReceita = passado.receita > 0
       ? ((atual.receita - passado.receita) / passado.receita) * 100
@@ -686,6 +732,7 @@ const getStats = async (req, res) => {
       variacaoUnidades: Number(variacaoUnidades.toFixed(1)),
       ticketMedio: Number(ticketMedio.toFixed(2)),
       range: range ? { from: range.from.toISOString().slice(0, 10), to: range.to.toISOString().slice(0, 10) } : null,
+      ...(lucroEstimado !== undefined && { lucroEstimado: Number(lucroEstimado.toFixed(2)) }),
     };
 
     return success(res, response);

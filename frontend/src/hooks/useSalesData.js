@@ -6,6 +6,7 @@ import { dashboardService } from '../services/dashboardService';
 const initialState = {
   summary: null,
   stats: null,
+  lucroEstimado: null,
   trend: [],
   trendGranularity: 'month',
   vendas: [],
@@ -24,6 +25,7 @@ const salesReducer = (state, action) => {
         ...state,
         summary: action.summary,
         stats: action.stats,
+        lucroEstimado: action.lucroEstimado ?? null,
         trend: action.trend || [],
         trendGranularity: action.trendGranularity || 'month',
         vendas: action.vendas || [],
@@ -64,6 +66,7 @@ export function useSalesData() {
         type: 'FETCH_SUCCESS',
         summary: summaryRes.data,
         stats: statsRes.data,
+        lucroEstimado: statsRes.data.lucroEstimado ?? null,
         trend: trendRes.data.trend,
         trendGranularity: trendRes.data.granularity,
         vendas: vendasRes.data.vendas,
@@ -88,6 +91,7 @@ export function useSalesData() {
   return {
     summary: state.summary,
     stats: state.stats,
+    lucroEstimado: state.lucroEstimado,
     trend: state.trend,
     trendGranularity: state.trendGranularity,
     vendas: state.vendas,
