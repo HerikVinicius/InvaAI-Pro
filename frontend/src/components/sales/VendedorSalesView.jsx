@@ -1,4 +1,13 @@
-import { Calendar, Shield, Info, ShoppingCart, Package, Trophy, XCircle, Receipt } from 'lucide-react';
+import { Calendar, Shield, Info, ShoppingCart, Package, Trophy, XCircle, Receipt, BarChart2 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { useVendedorSalesData } from '../../hooks/useVendedorSalesData';
 
 const formatDate = (date) => {
@@ -35,6 +44,19 @@ function VendorStatCard({ label, value, sub, tone, icon: Icon }) {
   );
 }
 
+function VendasBarTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-surface border border-border rounded-md px-3 py-2 text-xs shadow-lg">
+      <div className="font-semibold text-text-primary mb-1">{label}</div>
+      <div className="text-accent">{payload[0]?.value} {payload[0]?.value === 1 ? 'venda' : 'vendas'}</div>
+      {payload[1] && (
+        <div className="text-sky-300">{payload[1]?.value} {payload[1]?.value === 1 ? 'item' : 'itens'}</div>
+      )}
+    </div>
+  );
+}
+
 export default function VendedorSalesView() {
   const {
     from,
@@ -43,6 +65,7 @@ export default function VendedorSalesView() {
     setTo,
     vendas,
     myRanking,
+    relatorio,
     warning,
     loading,
     rangeDays,
@@ -138,6 +161,49 @@ export default function VendedorSalesView() {
           icon={Trophy}
         />
         <VendorStatCard label="Canceladas" value={totalCanceladas} sub="no período" tone="critical" icon={XCircle} />
+      </div>
+
+      {/* Gráfico de barras — vendas por dia no período */}
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+          <BarChart2 className="w-4 h-4 text-accent" />
+          <h3 className="text-sm font-semibold">Vendas por Dia</h3>
+          <span className="ml-auto text-xs text-text-muted">
+            {relatorio.totalVendas} {relatorio.totalVendas === 1 ? 'venda' : 'vendas'} · {relatorio.totalQuantidade} {relatorio.totalQuantidade === 1 ? 'item' : 'itens'}
+          </span>
+        </div>
+        <div className="px-2 py-4">
+          {loading ? (
+            <div className="h-40 flex items-center justify-center text-sm text-text-secondary">Carregando…</div>
+          ) : relatorio.dias.length === 0 ? (
+            <div className="h-40 flex items-center justify-center text-sm text-text-secondary">Nenhuma venda no período.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={relatorio.dias} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: '#8b8f8b' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 10, fill: '#8b8f8b' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<VendasBarTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                <Bar dataKey="quantidadeVendas" name="Vendas" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={32} />
+                <Bar dataKey="totalQuantidadeItens" name="Itens" fill="#38bdf8" radius={[3, 3, 0, 0]} maxBarSize={32} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+        <div className="px-5 pb-3 flex gap-4 text-xs text-text-muted">
+          <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-accent" /> Vendas concluídas</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-sky-400" /> Itens vendidos</span>
+        </div>
       </div>
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">

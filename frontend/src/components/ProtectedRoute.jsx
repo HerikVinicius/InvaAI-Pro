@@ -15,7 +15,7 @@ const PERMISSION_ROUTES = {
   inventory:  'permitir_cadastrar_produto',
 };
 
-export default function ProtectedRoute({ children, requireRole, requirePermission }) {
+export default function ProtectedRoute({ children, requireRole, requirePermission, requireAiChat }) {
   const { isAuthenticated, user } = useAuthStore();
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -32,6 +32,10 @@ export default function ProtectedRoute({ children, requireRole, requirePermissio
     if (!roles.includes(user?.role)) {
       return <Navigate to={homeRouteFor(user?.role)} replace />;
     }
+  }
+
+  if (requireAiChat && user?.aiChatEnabled === false) {
+    return <Navigate to={homeRouteFor(user?.role)} replace />;
   }
 
   return children;

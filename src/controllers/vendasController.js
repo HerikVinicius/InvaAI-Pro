@@ -913,6 +913,89 @@ const getReceiptData = async (req, res) => {
   }
 };
 
+/**
+ * GET /vendas/meu-relatorio
+ * Retorna vendas do próprio vendedor agrupadas por dia para gráfico de barras.
+ * Segurança: vendedor só acessa seus próprios dados (ownSalespersonId injetado no backend).
+ * Lojista/admin/master podem passar ?vendorId= para consultar qualquer vendedor.
+ * Campos de custo (purchasePrice) nunca são retornados.
+ */
+const getMeuRelatorio = async (req, res) => {
+  try {
+    const { Sale: TenantSale } = getModels(req);
+
+    let salespersonId;
+
+    if (isVendedor(req)) {
+      // Segurança: ignora qualquer vendorId da query e usa sempre o próprio.
+      salespersonId = await getVendorSalespersonId(req);
+      if (!salespersonId) {
+        return success(res, { dias: [], totalVendas: 0, totalQuantidade: 0, scope: 'vendedor' });
+      }
+    } else {
+      // Lojista/admin/master podem filtrar por vendedor específico ou ver todos.
+      salespersonId = req.query.vendorId || null;
+    }
+
+    const { from, to } = isVendedor(req)
+      ? buildVendorDateRange(req)
+      : (() => {
+          const range = parseDateRange(req);
+          if (range) return range;
+          const now = new Date();
+          const d7 = new Date(now);
+          d7.setDate(d7.getDate() - 6);
+          d7.setHours(0, 0, 0, 0);
+          return { from: d7, to: now };
+        })();
+
+    const match = { status: 'CONCLUIDA', createdAt: { $gte: from, $lte: to } };
+    if (salespersonId) match.vendorId = salespersonId;
+
+    const dados = await TenantSale.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            ano: { $year: '$createdAt' },
+            mes: { $month: '$createdAt' },
+            dia: { $dayOfMonth: '$createdAt' },
+          },
+          quantidadeVendas: { $sum: 1 },
+          totalQuantidadeItens: { $sum: { $sum: '$items.quantity' } },
+          // totalVendido é retornado para todos — é o valor de venda, não de custo.
+          totalVendido: { $sum: '$totalAmount' },
+        },
+      },
+      { $sort: { '_id.ano': 1, '_id.mes': 1, '_id.dia': 1 } },
+    ]);
+
+    const dias = dados.map((d) => ({
+      date: `${String(d._id.dia).padStart(2, '0')}/${String(d._id.mes).padStart(2, '0')}`,
+      quantidadeVendas: d.quantidadeVendas,
+      totalQuantidadeItens: d.totalQuantidadeItens,
+      // Para vendedor: retorna totalVendido como valor de suas próprias vendas (não é custo).
+      totalVendido: d.totalVendido,
+    }));
+
+    const totalVendas = dias.reduce((s, d) => s + d.quantidadeVendas, 0);
+    const totalQuantidade = dias.reduce((s, d) => s + d.totalQuantidadeItens, 0);
+    const totalVendido = dias.reduce((s, d) => s + d.totalVendido, 0);
+
+    return success(res, {
+      dias,
+      totalVendas,
+      totalQuantidade,
+      totalVendido,
+      scope: isVendedor(req) ? 'vendedor' : 'all',
+      range: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
+    });
+  } catch (err) {
+    console.error('[VendasController] getMeuRelatorio error:', err.message);
+    return error(res, 'Falha ao buscar relatório.', 500);
+  }
+};
+
 module.exports = {
   criarVenda,
   cancelarVenda,
@@ -923,4 +1006,5 @@ module.exports = {
   getTrend,
   getPaymentBreakdown,
   getReceiptData,
+  getMeuRelatorio,
 };

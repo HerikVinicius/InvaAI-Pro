@@ -23,7 +23,15 @@ const getInventory = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const filter = { isActive: true };
-    if (req.query.status) filter.status = req.query.status.toUpperCase();
+
+    // lowStock=true retorna apenas produtos com estoque abaixo do limite de aviso (LOW_STOCK ou CRITICAL).
+    // Tem precedência sobre o filtro de status individual.
+    if (req.query.lowStock === 'true') {
+      filter.status = { $in: ['LOW_STOCK', 'CRITICAL'] };
+    } else if (req.query.status) {
+      filter.status = req.query.status.toUpperCase();
+    }
+
     if (req.query.category) filter.category = new RegExp(req.query.category, 'i');
     if (req.query.search) {
       filter.$or = [

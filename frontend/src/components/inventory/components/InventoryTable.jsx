@@ -7,12 +7,19 @@ export default function InventoryTable({
   pagination,
   loading,
   canWrite,
+  lowStock,
   onEditClick,
   onLogsClick,
   onPageChange,
 }) {
+  const emptyMessage = lowStock
+    ? 'Nenhum produto com estoque abaixo do limite de aviso.'
+    : canWrite
+    ? 'Nenhum produto ainda. Clique em "Adicionar Produto" para começar.'
+    : 'Nenhum produto cadastrado.';
+
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden">
+    <div id="print-inventory-table" className="bg-surface border border-border rounded-lg overflow-hidden">
       <table className="w-full">
         <thead>
           <tr className="bg-surface-elevated border-b border-border">
@@ -22,7 +29,7 @@ export default function InventoryTable({
             <th className="text-right px-4 py-3 label-caps">Quantidade</th>
             <th className="text-left px-4 py-3 label-caps">Status</th>
             <th className="text-right px-4 py-3 label-caps">Preço</th>
-            <th className="text-right px-4 py-3 label-caps">Ações</th>
+            <th className="text-right px-4 py-3 label-caps print:hidden">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -32,7 +39,7 @@ export default function InventoryTable({
             ? (
               <tr>
                 <td colSpan={7} className="text-center py-12 text-text-secondary text-sm">
-                  Nenhum produto ainda. {canWrite && 'Clique em "Adicionar Produto" para começar.'}
+                  {emptyMessage}
                 </td>
               </tr>
             )
@@ -48,7 +55,7 @@ export default function InventoryTable({
                 <td className="px-4 py-3 text-right data-mono">{p.quantity}</td>
                 <td className="px-4 py-3"><Badge variant={p.status} /></td>
                 <td className="px-4 py-3 text-right data-mono">R$ {p.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right print:hidden">
                   <div className="inline-flex items-center gap-1">
                     <button
                       onClick={() => onLogsClick(p)}
@@ -75,7 +82,7 @@ export default function InventoryTable({
         </tbody>
       </table>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border print:hidden">
         <span className="text-xs text-text-secondary">
           Mostrando {products.length} de {pagination.total} produtos
         </span>

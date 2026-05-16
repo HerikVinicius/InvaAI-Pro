@@ -10,6 +10,7 @@ const {
   getTrend,
   getPaymentBreakdown,
   getReceiptData,
+  getMeuRelatorio,
 } = require('../controllers/vendasController');
 const { protect, authorize } = require('../middlewares/auth');
 
@@ -29,5 +30,9 @@ router.get('/payment-breakdown', authorize('master', 'admin', 'lojista'), getPay
 // Rankings: o controller decide a forma da resposta conforme o role.
 router.get('/top-vendedores',     getTopVendedores);
 router.get('/produtos/:vendorId', getProdutosMaisVendidosPorVendedor);
+
+// Relatório diário do próprio vendedor (gráfico de barras).
+// Acessível a todos os roles — o controller injeta o filtro correto por role.
+router.get('/meu-relatorio', getMeuRelatorio);
 
 module.exports = router;

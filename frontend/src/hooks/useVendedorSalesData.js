@@ -23,6 +23,7 @@ export function useVendedorSalesData() {
   const [to, setTo] = useState(toInputDate(today));
   const [vendas, setVendas] = useState([]);
   const [myRanking, setMyRanking] = useState({ position: null, totalVendedores: 0, quantidadeVendas: 0 });
+  const [relatorio, setRelatorio] = useState({ dias: [], totalVendas: 0, totalQuantidade: 0, totalVendido: 0 });
   const [warning, setWarning] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,9 +42,10 @@ export function useVendedorSalesData() {
       if (from) params.from = `${from}T00:00:00.000Z`;
       if (to) params.to = `${to}T23:59:59.999Z`;
 
-      const [vendasRes, topRes] = await Promise.all([
+      const [vendasRes, topRes, relatorioRes] = await Promise.all([
         vendasService.list(params),
         vendasService.getTopVendedores(),
+        vendasService.getMeuRelatorio({ from: `${from}T00:00:00.000Z`, to: `${to}T23:59:59.999Z` }),
       ]);
 
       setVendas(vendasRes.data.vendas || []);
@@ -56,6 +58,14 @@ export function useVendedorSalesData() {
         totalVendedores: top.totalVendedores || 0,
         quantidadeVendas: me?.quantidadeVendas || 0,
         vendorName: me?.vendorName || null,
+      });
+
+      const rel = relatorioRes.data;
+      setRelatorio({
+        dias: rel.dias || [],
+        totalVendas: rel.totalVendas || 0,
+        totalQuantidade: rel.totalQuantidade || 0,
+        totalVendido: rel.totalVendido || 0,
       });
     } catch (err) {
       console.error('[VendedorSales] fetchData error:', err);
@@ -76,6 +86,7 @@ export function useVendedorSalesData() {
     setTo,
     vendas,
     myRanking,
+    relatorio,
     warning,
     loading,
     rangeDays,

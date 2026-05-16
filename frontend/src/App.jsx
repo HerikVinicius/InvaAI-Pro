@@ -55,8 +55,8 @@ export default function App() {
             <Route path="/caixa"           element={<ProtectedRoute requirePermission="permitir_abrir_caixa"><Caixa /></ProtectedRoute>} />
             <Route path="/historico-caixa" element={<ProtectedRoute requirePermission="permitir_abrir_caixa"><HistoricoCaixa /></ProtectedRoute>} />
             <Route path="/clientes"        element={<ProtectedRoute requireRole={['admin', 'master', 'lojista']}><Clientes /></ProtectedRoute>} />
-            <Route path="/ai-insights"     element={<ProtectedRoute requireRole={['admin', 'master', 'lojista']}><AIInsights /></ProtectedRoute>} />
-            <Route path="/settings"        element={<Settings />} />
+            <Route path="/ai-insights"     element={<ProtectedRoute requireRole={['admin', 'master', 'lojista']} requireAiChat><AIInsights /></ProtectedRoute>} />
+            <Route path="/settings"        element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/users"           element={<ProtectedRoute requireRole={['admin', 'master']}><Users /></ProtectedRoute>} />
           </Route>
 

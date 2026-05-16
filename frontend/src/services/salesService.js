@@ -23,4 +23,5 @@ export const vendasService = {
   getTopVendedores: () => api.get('/vendas/top-vendedores'),
   getProdutosPorVendedor: (vendorId) => api.get(`/vendas/produtos/${vendorId}`),
   getPaymentBreakdown: (params = {}) => api.get('/vendas/payment-breakdown', { params }),
+  getMeuRelatorio: (params = {}) => api.get('/vendas/meu-relatorio', { params }),
 };
