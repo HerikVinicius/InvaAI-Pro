@@ -922,7 +922,7 @@ const getReceiptData = async (req, res) => {
  */
 const getMeuRelatorio = async (req, res) => {
   try {
-    const { Sale: TenantSale } = getModels(req);
+    const { Sale: TenantSale, Salesperson: TenantSalesperson } = getModels(req);
 
     let salespersonId;
 
@@ -930,10 +930,12 @@ const getMeuRelatorio = async (req, res) => {
       // Segurança: ignora qualquer vendorId da query e usa sempre o próprio.
       salespersonId = await getVendorSalespersonId(req);
       if (!salespersonId) {
-        return success(res, { dias: [], totalVendas: 0, totalQuantidade: 0, scope: 'vendedor' });
+        return success(res, {
+          dias: [], totalVendas: 0, totalQuantidade: 0, totalVendido: 0,
+          salesTarget: 0, salesRealized: 0, achievementPct: 0, scope: 'vendedor',
+        });
       }
     } else {
-      // Lojista/admin/master podem filtrar por vendedor específico ou ver todos.
       salespersonId = req.query.vendorId || null;
     }
 
@@ -952,41 +954,57 @@ const getMeuRelatorio = async (req, res) => {
     const match = { status: 'CONCLUIDA', createdAt: { $gte: from, $lte: to } };
     if (salespersonId) match.vendorId = salespersonId;
 
-    const dados = await TenantSale.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: {
-            ano: { $year: '$createdAt' },
-            mes: { $month: '$createdAt' },
-            dia: { $dayOfMonth: '$createdAt' },
+    // Busca dados de vendas e perfil do salesperson em paralelo.
+    const [dados, salesperson] = await Promise.all([
+      TenantSale.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: {
+              ano: { $year: '$createdAt' },
+              mes: { $month: '$createdAt' },
+              dia: { $dayOfMonth: '$createdAt' },
+            },
+            quantidadeVendas: { $sum: 1 },
+            totalQuantidadeItens: { $sum: { $sum: '$items.quantity' } },
+            totalVendido: { $sum: '$totalAmount' },
           },
-          quantidadeVendas: { $sum: 1 },
-          totalQuantidadeItens: { $sum: { $sum: '$items.quantity' } },
-          // totalVendido é retornado para todos — é o valor de venda, não de custo.
-          totalVendido: { $sum: '$totalAmount' },
         },
-      },
-      { $sort: { '_id.ano': 1, '_id.mes': 1, '_id.dia': 1 } },
+        { $sort: { '_id.ano': 1, '_id.mes': 1, '_id.dia': 1 } },
+      ]),
+      salespersonId
+        ? TenantSalesperson.findById(salespersonId).select('salesTarget salesRealized name').lean()
+        : null,
     ]);
 
     const dias = dados.map((d) => ({
       date: `${String(d._id.dia).padStart(2, '0')}/${String(d._id.mes).padStart(2, '0')}`,
       quantidadeVendas: d.quantidadeVendas,
       totalQuantidadeItens: d.totalQuantidadeItens,
-      // Para vendedor: retorna totalVendido como valor de suas próprias vendas (não é custo).
-      totalVendido: d.totalVendido,
+      totalVendido: Math.round(d.totalVendido * 100) / 100,
     }));
 
     const totalVendas = dias.reduce((s, d) => s + d.quantidadeVendas, 0);
     const totalQuantidade = dias.reduce((s, d) => s + d.totalQuantidadeItens, 0);
-    const totalVendido = dias.reduce((s, d) => s + d.totalVendido, 0);
+    const totalVendido = Math.round(dias.reduce((s, d) => s + d.totalVendido, 0) * 100) / 100;
+
+    const salesTarget = salesperson?.salesTarget ?? 0;
+    const salesRealized = salesperson?.salesRealized ?? 0;
+    // Percentual de atingimento: usa totalVendido do período ou salesRealized do perfil.
+    // Para o vendedor logado usamos totalVendido (calculado em tempo real sobre o período filtrado).
+    const achievementPct = salesTarget > 0
+      ? Math.min(Math.round((totalVendido / salesTarget) * 100), 999)
+      : 0;
 
     return success(res, {
       dias,
       totalVendas,
       totalQuantidade,
       totalVendido,
+      salesTarget,
+      salesRealized,
+      achievementPct,
+      vendorName: salesperson?.name || null,
       scope: isVendedor(req) ? 'vendedor' : 'all',
       range: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
     });

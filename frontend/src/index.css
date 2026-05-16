@@ -28,51 +28,105 @@
   }
 }
 
-/* Impressão: oculta toda a UI de navegação, exibe apenas a tabela de estoque */
+/* ─────────────────────────────────────────────────────────────────────────────
+   Impressão — impressora de cupom/notinha (papel 80 mm, margem mínima)
+   Toda a UI de navegação é ocultada; apenas #print-inventory-table é exibido.
+   ───────────────────────────────────────────────────────────────────────────── */
 @media print {
-  /* Oculta sidebar, topbar e todos os elementos marcados com print:hidden */
+  /* Tamanho de página para impressora de cupom 80 mm */
+  @page {
+    size: 80mm auto;
+    margin: 4mm 3mm;
+  }
+
+  /* Oculta toda a shell da aplicação */
   nav, aside, header,
   [data-sidebar], [data-topbar],
   .print\:hidden {
     display: none !important;
   }
 
-  /* Remove background escuro — imprime fundo branco */
-  body, #root {
+  /* Fundo branco, texto preto */
+  html, body, #root {
     background: #ffffff !important;
     color: #111111 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 9pt !important;
+    width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  /* A tabela ocupa toda a largura */
+  /* Container da tabela ocupa a largura do cupom */
   #print-inventory-table {
     width: 100% !important;
-    border: 1px solid #d1d5db !important;
+    border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-  }
-
-  #print-inventory-table table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  #print-inventory-table th,
-  #print-inventory-table td {
-    border: 1px solid #e5e7eb;
-    padding: 6px 10px;
-    font-size: 11px;
-    color: #111111 !important;
     background: transparent !important;
   }
 
-  #print-inventory-table thead tr {
-    background: #f3f4f6 !important;
+  /* Divisor de cabeçalho estilo cupom */
+  #print-inventory-table table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
   }
 
-  /* Garante que não quebra linhas da tabela no meio */
+  /* Cabeçalho das colunas */
+  #print-inventory-table thead tr {
+    border-top: 1px dashed #333;
+    border-bottom: 1px dashed #333;
+  }
+
+  #print-inventory-table th {
+    padding: 2px 3px;
+    font-size: 7pt !important;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #111 !important;
+    background: transparent !important;
+    text-align: left;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  /* Células de dados */
+  #print-inventory-table td {
+    padding: 2px 3px;
+    font-size: 8pt !important;
+    color: #111 !important;
+    background: transparent !important;
+    border-bottom: 1px dotted #ccc;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Linha de totais no rodapé da tabela */
+  #print-inventory-table tfoot td {
+    border-top: 1px dashed #333;
+    font-weight: bold;
+    padding-top: 3px;
+  }
+
+  /* Impede quebra de linha no meio de um item */
   #print-inventory-table tr {
     page-break-inside: avoid;
   }
+
+  /* Colunas menos importantes ficam menores no cupom */
+  #print-inventory-table th:nth-child(2),
+  #print-inventory-table td:nth-child(2) { width: 18mm; }  /* Código */
+  #print-inventory-table th:nth-child(3),
+  #print-inventory-table td:nth-child(3) { display: none; } /* Categoria — omitida no cupom */
+  #print-inventory-table th:nth-child(4),
+  #print-inventory-table td:nth-child(4) { width: 10mm; text-align: right; } /* Qtd */
+  #print-inventory-table th:nth-child(5),
+  #print-inventory-table td:nth-child(5) { width: 14mm; } /* Status */
+  #print-inventory-table th:nth-child(6),
+  #print-inventory-table td:nth-child(6) { width: 16mm; text-align: right; } /* Preço */
 }
 
 @layer utilities {

@@ -1,4 +1,4 @@
-import { Calendar, Shield, Info, ShoppingCart, Package, Trophy, XCircle, Receipt, BarChart2 } from 'lucide-react';
+import { Calendar, Shield, Info, ShoppingCart, Package, Trophy, XCircle, Receipt, BarChart2, TrendingUp, Target } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -9,6 +9,9 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useVendedorSalesData } from '../../hooks/useVendedorSalesData';
+
+const fmtBRL = (v) =>
+  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -27,9 +30,10 @@ const formatDate = (date) => {
 
 function VendorStatCard({ label, value, sub, tone, icon: Icon }) {
   const tones = {
-    accent: 'text-accent',
-    sky: 'text-sky-300',
-    amber: 'text-amber-300',
+    accent:   'text-accent',
+    sky:      'text-sky-300',
+    amber:    'text-amber-300',
+    emerald:  'text-emerald-400',
     critical: 'text-status-critical',
   };
   return (
@@ -44,44 +48,107 @@ function VendorStatCard({ label, value, sub, tone, icon: Icon }) {
   );
 }
 
+function MetaProgressBar({ pct, totalVendido, salesTarget }) {
+  const clamped = Math.min(pct, 100);
+  const over = pct > 100;
+  const barColor = over
+    ? 'bg-emerald-400'
+    : pct >= 75
+    ? 'bg-accent'
+    : pct >= 40
+    ? 'bg-amber-400'
+    : 'bg-status-critical';
+
+  const labelColor = over
+    ? 'text-emerald-400'
+    : pct >= 75
+    ? 'text-accent'
+    : pct >= 40
+    ? 'text-amber-300'
+    : 'text-status-critical';
+
+  return (
+    <div className="bg-surface border border-border rounded-xl p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Target className="w-4 h-4 text-accent" />
+          <span className="text-sm font-semibold">Progresso da Meta</span>
+        </div>
+        <span className={`font-mono text-xl font-bold ${labelColor}`}>
+          {pct}%
+          {over && <span className="ml-1 text-xs font-normal text-emerald-400">Meta atingida!</span>}
+        </span>
+      </div>
+
+      {/* Barra de progresso */}
+      <div className="relative h-4 bg-surface-elevated rounded-full overflow-hidden border border-border">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`}
+          style={{ width: `${clamped}%` }}
+        />
+        {/* Marca de 100% */}
+        <div className="absolute right-0 top-0 h-full w-px bg-border/60" />
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-text-muted">
+        <div className="flex gap-4">
+          <span>
+            Vendido:{' '}
+            <span className="font-mono font-semibold text-text-primary">{fmtBRL(totalVendido)}</span>
+          </span>
+          <span>
+            Meta:{' '}
+            <span className="font-mono font-semibold text-text-primary">
+              {salesTarget > 0 ? fmtBRL(salesTarget) : 'Sem meta definida'}
+            </span>
+          </span>
+        </div>
+        {salesTarget > 0 && totalVendido < salesTarget && (
+          <span className="text-[10px]">
+            Faltam{' '}
+            <span className="font-mono font-semibold text-amber-300">{fmtBRL(salesTarget - totalVendido)}</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function VendasBarTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-surface border border-border rounded-md px-3 py-2 text-xs shadow-lg">
+    <div className="bg-surface border border-border rounded-md px-3 py-2 text-xs shadow-lg space-y-1">
       <div className="font-semibold text-text-primary mb-1">{label}</div>
-      <div className="text-accent">{payload[0]?.value} {payload[0]?.value === 1 ? 'venda' : 'vendas'}</div>
-      {payload[1] && (
-        <div className="text-sky-300">{payload[1]?.value} {payload[1]?.value === 1 ? 'item' : 'itens'}</div>
-      )}
+      {payload.map((p) => (
+        <div key={p.dataKey} style={{ color: p.fill }}>
+          {p.name}:{' '}
+          <span className="font-mono font-semibold">
+            {p.dataKey === 'totalVendido' ? fmtBRL(p.value) : p.value}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
 
 export default function VendedorSalesView() {
   const {
-    from,
-    setFrom,
-    to,
-    setTo,
-    vendas,
-    myRanking,
-    relatorio,
-    warning,
-    loading,
-    rangeDays,
-    exceedsLimit,
-    today,
-    toInputDate,
+    from, setFrom, to, setTo,
+    vendas, myRanking, relatorio,
+    warning, loading, rangeDays, exceedsLimit, today, toInputDate,
   } = useVendedorSalesData();
 
-  const totalVendas = vendas.filter((v) => v.status === 'CONCLUIDA').length;
-  const totalItens = vendas
+  const totalVendas     = vendas.filter((v) => v.status === 'CONCLUIDA').length;
+  const totalItens      = vendas
     .filter((v) => v.status === 'CONCLUIDA')
     .reduce((s, v) => s + (v.items?.reduce((a, i) => a + (i.quantity || 0), 0) || 0), 0);
   const totalCanceladas = vendas.filter((v) => v.status === 'CANCELADA').length;
 
+  const { totalVendido, salesTarget, achievementPct } = relatorio;
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs text-text-muted">Minhas Vendas</div>
@@ -99,6 +166,7 @@ export default function VendedorSalesView() {
         </div>
       )}
 
+      {/* Filtro de período */}
       <div className="bg-surface border border-border rounded-lg p-4 flex items-end gap-4 flex-wrap">
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           <Calendar className="w-3.5 h-3.5" />
@@ -125,13 +193,7 @@ export default function VendedorSalesView() {
             className="bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:border-accent"
           />
         </div>
-        <div
-          className={`text-xs px-2 py-1 rounded ${
-            exceedsLimit
-              ? 'bg-status-critical/10 text-status-critical'
-              : 'bg-accent/10 text-accent'
-          }`}
-        >
+        <div className={`text-xs px-2 py-1 rounded ${exceedsLimit ? 'bg-status-critical/10 text-status-critical' : 'bg-accent/10 text-accent'}`}>
           {rangeDays} {rangeDays === 1 ? 'dia' : 'dias'} / máx 30
         </div>
         <div className="ml-auto inline-flex items-center gap-1.5 text-[10px] text-text-muted">
@@ -150,9 +212,36 @@ export default function VendedorSalesView() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <VendorStatCard label="Vendas Concluídas" value={totalVendas} sub="no período" tone="accent" icon={ShoppingCart} />
-        <VendorStatCard label="Unidades Vendidas" value={totalItens} sub="produtos saídos" tone="sky" icon={Package} />
+      {/* Cards de estatísticas — 5 colunas incluindo valor vendido e percentual */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <VendorStatCard
+          label="Vendas Concluídas"
+          value={totalVendas}
+          sub="no período"
+          tone="accent"
+          icon={ShoppingCart}
+        />
+        <VendorStatCard
+          label="Unidades Vendidas"
+          value={totalItens}
+          sub="produtos saídos"
+          tone="sky"
+          icon={Package}
+        />
+        <VendorStatCard
+          label="Valor Vendido"
+          value={fmtBRL(totalVendido)}
+          sub={salesTarget > 0 ? `meta: ${fmtBRL(salesTarget)}` : 'sem meta definida'}
+          tone="emerald"
+          icon={TrendingUp}
+        />
+        <VendorStatCard
+          label="% da Meta"
+          value={salesTarget > 0 ? `${achievementPct}%` : '—'}
+          sub={salesTarget > 0 ? (achievementPct >= 100 ? 'Meta atingida!' : 'do objetivo') : 'meta não configurada'}
+          tone={achievementPct >= 100 ? 'emerald' : achievementPct >= 75 ? 'accent' : achievementPct >= 40 ? 'amber' : 'critical'}
+          icon={Target}
+        />
         <VendorStatCard
           label="Sua Posição"
           value={myRanking.position ? `#${myRanking.position}` : '—'}
@@ -160,26 +249,36 @@ export default function VendedorSalesView() {
           tone="amber"
           icon={Trophy}
         />
-        <VendorStatCard label="Canceladas" value={totalCanceladas} sub="no período" tone="critical" icon={XCircle} />
       </div>
 
-      {/* Gráfico de barras — vendas por dia no período */}
+      {/* Barra de progresso da meta */}
+      {!loading && (
+        <MetaProgressBar
+          pct={achievementPct}
+          totalVendido={totalVendido}
+          salesTarget={salesTarget}
+        />
+      )}
+
+      {/* Gráfico de barras — vendas por dia com valor */}
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border flex items-center gap-2">
           <BarChart2 className="w-4 h-4 text-accent" />
           <h3 className="text-sm font-semibold">Vendas por Dia</h3>
           <span className="ml-auto text-xs text-text-muted">
-            {relatorio.totalVendas} {relatorio.totalVendas === 1 ? 'venda' : 'vendas'} · {relatorio.totalQuantidade} {relatorio.totalQuantidade === 1 ? 'item' : 'itens'}
+            {relatorio.totalVendas} {relatorio.totalVendas === 1 ? 'venda' : 'vendas'} ·{' '}
+            {relatorio.totalQuantidade} {relatorio.totalQuantidade === 1 ? 'item' : 'itens'} ·{' '}
+            <span className="text-emerald-400 font-semibold">{fmtBRL(totalVendido)}</span>
           </span>
         </div>
         <div className="px-2 py-4">
           {loading ? (
-            <div className="h-40 flex items-center justify-center text-sm text-text-secondary">Carregando…</div>
+            <div className="h-48 flex items-center justify-center text-sm text-text-secondary">Carregando…</div>
           ) : relatorio.dias.length === 0 ? (
-            <div className="h-40 flex items-center justify-center text-sm text-text-secondary">Nenhuma venda no período.</div>
+            <div className="h-48 flex items-center justify-center text-sm text-text-secondary">Nenhuma venda no período.</div>
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={relatorio.dias} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={relatorio.dias} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                 <XAxis
                   dataKey="date"
@@ -188,24 +287,39 @@ export default function VendedorSalesView() {
                   tickLine={false}
                 />
                 <YAxis
+                  yAxisId="qty"
+                  orientation="left"
                   allowDecimals={false}
                   tick={{ fontSize: 10, fill: '#8b8f8b' }}
                   axisLine={false}
                   tickLine={false}
+                  width={28}
+                />
+                <YAxis
+                  yAxisId="val"
+                  orientation="right"
+                  tick={{ fontSize: 10, fill: '#8b8f8b' }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={52}
+                  tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
                 />
                 <Tooltip content={<VendasBarTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                <Bar dataKey="quantidadeVendas" name="Vendas" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={32} />
-                <Bar dataKey="totalQuantidadeItens" name="Itens" fill="#38bdf8" radius={[3, 3, 0, 0]} maxBarSize={32} />
+                <Bar yAxisId="qty" dataKey="quantidadeVendas" name="Vendas" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={24} />
+                <Bar yAxisId="qty" dataKey="totalQuantidadeItens" name="Itens" fill="#38bdf8" radius={[3, 3, 0, 0]} maxBarSize={24} />
+                <Bar yAxisId="val" dataKey="totalVendido" name="Valor (R$)" fill="#a78bfa" radius={[3, 3, 0, 0]} maxBarSize={24} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </div>
-        <div className="px-5 pb-3 flex gap-4 text-xs text-text-muted">
+        <div className="px-5 pb-3 flex gap-4 text-xs text-text-muted flex-wrap">
           <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-accent" /> Vendas concluídas</span>
           <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-sky-400" /> Itens vendidos</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-violet-400" /> Valor vendido (R$)</span>
         </div>
       </div>
 
+      {/* Tabela de vendas */}
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border flex items-center gap-2">
           <Receipt className="w-4 h-4 text-accent" />
@@ -230,9 +344,7 @@ export default function VendedorSalesView() {
               return (
                 <div
                   key={v._id}
-                  className={`px-5 py-3.5 hover:bg-surface-hover transition-colors ${
-                    isCancelled ? 'opacity-60' : ''
-                  }`}
+                  className={`px-5 py-3.5 hover:bg-surface-hover transition-colors ${isCancelled ? 'opacity-60' : ''}`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-9 h-9 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-semibold">
@@ -266,6 +378,11 @@ export default function VendedorSalesView() {
                         </div>
                       )}
                     </div>
+                    {!isCancelled && v.totalAmount != null && (
+                      <span className="font-mono text-sm font-semibold text-emerald-400 shrink-0">
+                        {fmtBRL(v.totalAmount)}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -277,7 +394,8 @@ export default function VendedorSalesView() {
       <div className="bg-surface border border-border rounded-lg p-4 text-xs text-text-muted flex gap-3">
         <Shield className="w-4 h-4 text-accent flex-shrink-0" />
         <div>
-          Esta tela exibe <strong className="text-text-primary">apenas suas próprias vendas</strong>. Valores monetários, ranking de colegas e relatórios financeiros são restritos ao lojista.
+          Esta tela exibe <strong className="text-text-primary">apenas suas próprias vendas</strong>.
+          Ranking de colegas e relatórios financeiros globais são restritos ao lojista.
         </div>
       </div>
     </div>

@@ -23,7 +23,10 @@ export function useVendedorSalesData() {
   const [to, setTo] = useState(toInputDate(today));
   const [vendas, setVendas] = useState([]);
   const [myRanking, setMyRanking] = useState({ position: null, totalVendedores: 0, quantidadeVendas: 0 });
-  const [relatorio, setRelatorio] = useState({ dias: [], totalVendas: 0, totalQuantidade: 0, totalVendido: 0 });
+  const [relatorio, setRelatorio] = useState({
+    dias: [], totalVendas: 0, totalQuantidade: 0, totalVendido: 0,
+    salesTarget: 0, salesRealized: 0, achievementPct: 0, vendorName: null,
+  });
   const [warning, setWarning] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -66,6 +69,10 @@ export function useVendedorSalesData() {
         totalVendas: rel.totalVendas || 0,
         totalQuantidade: rel.totalQuantidade || 0,
         totalVendido: rel.totalVendido || 0,
+        salesTarget: rel.salesTarget || 0,
+        salesRealized: rel.salesRealized || 0,
+        achievementPct: rel.achievementPct || 0,
+        vendorName: rel.vendorName || null,
       });
     } catch (err) {
       console.error('[VendedorSales] fetchData error:', err);
