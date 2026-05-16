@@ -39,10 +39,16 @@
     margin: 4mm 3mm;
   }
 
-  /* Oculta toda a shell da aplicação */
+  /* Oculta toda a shell da aplicação: sidebar, topbar, FAB, notificações */
   nav, aside, header,
   [data-sidebar], [data-topbar],
   .print\:hidden {
+    display: none !important;
+  }
+
+  /* Topbar (div com h-[73px]) e FAB (fixed bottom-6 right-6) */
+  .h-\[73px\],
+  .fixed.bottom-6.right-6 {
     display: none !important;
   }
 
@@ -116,17 +122,28 @@
     page-break-inside: avoid;
   }
 
-  /* Colunas menos importantes ficam menores no cupom */
+  /* Colunas visíveis no cupom: Nome | Qtd | Status
+     Código (2ª), Categoria (3ª) e Preço (6ª) são ocultados */
+  #print-inventory-table th:nth-child(1),
+  #print-inventory-table td:nth-child(1) { width: auto; }          /* Nome — ocupa o restante */
+
   #print-inventory-table th:nth-child(2),
-  #print-inventory-table td:nth-child(2) { width: 18mm; }  /* Código */
+  #print-inventory-table td:nth-child(2) { display: none; }        /* Código — oculto */
+
   #print-inventory-table th:nth-child(3),
-  #print-inventory-table td:nth-child(3) { display: none; } /* Categoria — omitida no cupom */
+  #print-inventory-table td:nth-child(3) { display: none; }        /* Categoria — oculta */
+
   #print-inventory-table th:nth-child(4),
-  #print-inventory-table td:nth-child(4) { width: 10mm; text-align: right; } /* Qtd */
+  #print-inventory-table td:nth-child(4) { width: 12mm; text-align: right; } /* Qtd */
+
   #print-inventory-table th:nth-child(5),
-  #print-inventory-table td:nth-child(5) { width: 14mm; } /* Status */
+  #print-inventory-table td:nth-child(5) { width: 16mm; }          /* Status */
+
   #print-inventory-table th:nth-child(6),
-  #print-inventory-table td:nth-child(6) { width: 16mm; text-align: right; } /* Preço */
+  #print-inventory-table td:nth-child(6) { display: none; }        /* Preço — oculto */
+
+  #print-inventory-table th:nth-child(7),
+  #print-inventory-table td:nth-child(7) { display: none; }        /* Ações — oculto */
 }
 
 @layer utilities {

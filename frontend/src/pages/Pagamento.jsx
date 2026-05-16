@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Banknote, Smartphone, ArrowLeft, CheckCircle, UserCircle, ClipboardSignature } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, ArrowLeft, CheckCircle, UserCircle, ClipboardSignature, Coins, Percent } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import Button from '../components/ui/Button';
@@ -49,6 +49,12 @@ export default function Pagamento() {
   // Cliente para fiado (qualquer fatia FIADO exige cliente).
   const [cliente, setCliente] = useState(null);
 
+  // Dinheiro: valor recebido → troco
+  const [valorRecebido, setValorRecebido] = useState('');
+
+  // Crédito: acréscimo percentual (ex: 3.5 = 3,5%)
+  const [acrescimoPct, setAcrescimoPct] = useState('');
+
   useEffect(() => {
     const raw = sessionStorage.getItem('vendaPendente');
     if (!raw) { toast.error('Nenhuma venda em andamento.'); navigate('/nova-venda'); return; }
@@ -57,9 +63,38 @@ export default function Pagamento() {
     } catch { navigate('/nova-venda'); }
   }, [navigate]);
 
-  const total = dadosVenda?.totalAmount || 0;
+  const baseTotal = dadosVenda?.totalAmount || 0;
+
+  // Total efetivo: aplica acréscimo do crédito apenas quando CREDITO é o único método
+  // ou quando está em split (o acréscimo incide sobre a fatia de crédito).
+  const temCredito = selectedMethods.includes('CREDITO');
+  const pctNum = Math.max(0, Math.min(100, parseFloat(acrescimoPct) || 0));
+
+  const total = useMemo(() => {
+    if (!temCredito || pctNum === 0) return baseTotal;
+    // Acréscimo incide sobre o valor alocado ao crédito
+    const valorCredito = Number(valores.CREDITO) || (selectedMethods.length === 1 ? baseTotal : 0);
+    const acrescimo = Math.round(valorCredito * (pctNum / 100) * 100) / 100;
+    return Math.round((baseTotal + acrescimo) * 100) / 100;
+  }, [baseTotal, temCredito, pctNum, valores.CREDITO, selectedMethods.length]);
+
+  const acrescimoValor = useMemo(() => {
+    if (!temCredito || pctNum === 0) return 0;
+    const valorCredito = Number(valores.CREDITO) || (selectedMethods.length === 1 ? baseTotal : 0);
+    return Math.round(valorCredito * (pctNum / 100) * 100) / 100;
+  }, [baseTotal, temCredito, pctNum, valores.CREDITO, selectedMethods.length]);
+
   const isSplit = selectedMethods.length > 1;
   const temFiado = selectedMethods.includes('FIADO');
+
+  // Troco: só quando DINHEIRO é único método (split com dinheiro não calcula troco)
+  const temDinheiro = selectedMethods.includes('DINHEIRO');
+  const recebidoNum = parseFloat(valorRecebido) || 0;
+  const troco = useMemo(() => {
+    if (!temDinheiro || isSplit) return null;
+    if (recebidoNum <= 0) return null;
+    return Math.max(0, Math.round((recebidoNum - total) * 100) / 100);
+  }, [temDinheiro, isSplit, recebidoNum, total]);
 
   const somaValores = selectedMethods.reduce((s, m) => s + (Number(valores[m]) || 0), 0);
   const delta = total - somaValores;
@@ -84,8 +119,13 @@ export default function Pagamento() {
       setValores({});
       setParcelas({});
       setCliente(null);
+      setValorRecebido('');
+      setAcrescimoPct('');
       return;
     }
+
+    if (!next.includes('DINHEIRO')) setValorRecebido('');
+    if (!next.includes('CREDITO')) setAcrescimoPct('');
 
     if (next.length === 1) {
       // Volta para modo simples: 100% no único método.
@@ -141,6 +181,13 @@ export default function Pagamento() {
       if (cliente) {
         body.clienteId = cliente._id;
         body.clienteName = cliente.name;
+      }
+
+      // Propaga acréscimo de crédito no totalAmount enviado ao backend.
+      if (acrescimoValor > 0) {
+        body.totalAmount = total;
+        body.creditSurcharge = acrescimoValor;
+        body.creditSurchargePct = pctNum;
       }
 
       if (isSplit) {
@@ -227,10 +274,16 @@ export default function Pagamento() {
 
   if (!dadosVenda) return null;
 
+  // Bloqueia finalização se valor recebido em dinheiro for insuficiente
+  // (campo preenchido mas abaixo do total — se vazio, permite pois o troco não é obrigatório).
+  const dinheiroInsuficiente =
+    temDinheiro && !isSplit && valorRecebido !== '' && recebidoNum < total;
+
   const podeAvancar =
     selectedMethods.length > 0 &&
     (!isSplit || somaOk) &&
-    (!temFiado || !!cliente);
+    (!temFiado || !!cliente) &&
+    !dinheiroInsuficiente;
 
   return (
     <div className="max-w-lg mx-auto space-y-5 animate-fade-in">
@@ -257,6 +310,12 @@ export default function Pagamento() {
             </div>
           ))}
         </div>
+        {acrescimoValor > 0 && (
+          <div className="flex justify-between text-xs text-amber-300 mt-2">
+            <span>Acréscimo crédito ({pctNum}%)</span>
+            <span className="font-mono">+{formatBRL(acrescimoValor)}</span>
+          </div>
+        )}
         <div className="border-t border-border mt-3 pt-3 flex justify-between text-sm font-semibold">
           <span>Total</span>
           <span className="data-mono text-accent">{formatBRL(total)}</span>
@@ -342,31 +401,118 @@ export default function Pagamento() {
             </div>
           )}
 
+          {/* Acréscimo por cartão de crédito */}
           {selectedMethods.includes('CREDITO') && (
-            <div className="bg-surface border border-border rounded-lg p-4">
-              <p className="label-caps mb-2">Parcelas (Crédito)</p>
-              <div className="grid grid-cols-4 gap-1.5">
-                {PARCELAS.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setParcelas((prev) => ({ ...prev, CREDITO: n }))}
-                    className={`py-1.5 rounded text-xs font-semibold border transition-all ${
-                      (parcelas.CREDITO || 1) === n
-                        ? 'border-accent bg-accent/10 text-accent'
-                        : 'border-border bg-background text-text-secondary hover:border-accent/40'
-                    }`}
-                  >
-                    {n === 1 ? 'À vista' : `${n}x`}
-                  </button>
-                ))}
+            <div className="bg-surface border border-border rounded-lg p-4 space-y-3">
+              {/* Campo de acréscimo */}
+              <div>
+                <p className="label-caps mb-2 flex items-center gap-1.5">
+                  <Percent className="w-3 h-3" /> Acréscimo (Crédito)
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      placeholder="0,0"
+                      value={acrescimoPct}
+                      onChange={(e) => setAcrescimoPct(e.target.value)}
+                      className="w-full bg-background border border-border rounded-md pl-3 pr-8 py-2 text-sm font-mono focus:outline-none focus:border-accent text-right"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-text-muted">%</span>
+                  </div>
+                  {pctNum > 0 && (
+                    <div className="text-xs text-right shrink-0">
+                      <div className="text-text-muted">Acréscimo</div>
+                      <div className="font-mono font-semibold text-amber-300">+{formatBRL(acrescimoValor)}</div>
+                    </div>
+                  )}
+                </div>
+                {pctNum > 0 && (
+                  <p className="text-xs text-text-muted mt-1.5">
+                    Total com acréscimo:{' '}
+                    <span className="font-mono font-semibold text-accent">{formatBRL(total)}</span>
+                  </p>
+                )}
               </div>
-              {(parcelas.CREDITO || 1) > 1 && (
-                <p className="text-xs text-text-muted mt-2">
-                  {parcelas.CREDITO}x de{' '}
-                  <span className="font-semibold text-accent">
-                    {formatBRL((Number(valores.CREDITO) || 0) / parcelas.CREDITO)}
-                  </span>
+
+              {/* Parcelas */}
+              <div>
+                <p className="label-caps mb-2">Parcelas</p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {PARCELAS.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setParcelas((prev) => ({ ...prev, CREDITO: n }))}
+                      className={`py-1.5 rounded text-xs font-semibold border transition-all ${
+                        (parcelas.CREDITO || 1) === n
+                          ? 'border-accent bg-accent/10 text-accent'
+                          : 'border-border bg-background text-text-secondary hover:border-accent/40'
+                      }`}
+                    >
+                      {n === 1 ? 'À vista' : `${n}x`}
+                    </button>
+                  ))}
+                </div>
+                {(parcelas.CREDITO || 1) > 1 && (
+                  <p className="text-xs text-text-muted mt-2">
+                    {parcelas.CREDITO}x de{' '}
+                    <span className="font-mono font-semibold text-accent">
+                      {formatBRL((Number(valores.CREDITO) || total) / parcelas.CREDITO)}
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Troco para pagamento em Dinheiro (apenas modo simples) */}
+          {selectedMethods.includes('DINHEIRO') && !isSplit && (
+            <div className="bg-surface border border-border rounded-lg p-4 space-y-2 animate-fade-in">
+              <p className="label-caps flex items-center gap-1.5">
+                <Coins className="w-3 h-3" /> Valor Recebido
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-text-muted">R$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder={formatBRL(total).replace('R$ ', '')}
+                    value={valorRecebido}
+                    onChange={(e) => setValorRecebido(e.target.value)}
+                    className="w-full bg-background border border-border rounded-md pl-7 pr-3 py-2 text-sm font-mono focus:outline-none focus:border-accent text-right"
+                    autoFocus
+                  />
+                </div>
+                {troco !== null && (
+                  <div className={`text-right shrink-0 px-3 py-2 rounded-md border ${
+                    troco === 0
+                      ? 'border-accent/40 bg-accent/5'
+                      : recebidoNum < total
+                      ? 'border-status-critical/40 bg-status-critical/5'
+                      : 'border-emerald-500/40 bg-emerald-500/5'
+                  }`}>
+                    <div className="text-[10px] text-text-muted uppercase tracking-wide">
+                      {recebidoNum < total ? 'Falta' : 'Troco'}
+                    </div>
+                    <div className={`font-mono font-bold text-base ${
+                      recebidoNum < total ? 'text-status-critical' : 'text-emerald-400'
+                    }`}>
+                      {recebidoNum < total
+                        ? formatBRL(total - recebidoNum)
+                        : formatBRL(troco)}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {troco === null && (
+                <p className="text-xs text-text-muted">
+                  Digite o valor entregue pelo cliente para calcular o troco.
                 </p>
               )}
             </div>
