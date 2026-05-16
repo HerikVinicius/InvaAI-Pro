@@ -5,24 +5,10 @@ const { getTenantConnection } = require('../utils/connectionManager');
 
 const { USERNAME_REGEX } = User;
 const VALID_ROLES = ['master', 'admin', 'lojista', 'vendedor', 'gerente'];
-const PIN_REGEX = /^\d{4}$/;
-
-/**
- * Validates the plaintext password against the role-specific rule:
- *   - vendedor → exactly 4 numeric digits (PIN)
- *   - others   → 8+ characters
- * Returns null if valid, or an error message string.
- */
 const validatePasswordForRole = (password, role) => {
   if (!password) return 'Senha é obrigatória.';
-  if (role === 'vendedor' || role === 'gerente') {
-    if (!PIN_REGEX.test(password)) {
-      return 'PIN deve ter exatamente 4 dígitos numéricos.';
-    }
-    return null;
-  }
-  if (password.length < 8) {
-    return 'Senha deve ter pelo menos 8 caracteres.';
+  if (password.length < 4) {
+    return 'Senha deve ter no mínimo 4 caracteres.';
   }
   return null;
 };

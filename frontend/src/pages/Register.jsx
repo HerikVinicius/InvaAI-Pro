@@ -61,8 +61,8 @@ export default function Register() {
       toast.error('Username inválido — use 3-30 letras, números, "." ou "_".');
       return;
     }
-    if (form.password.length < 8) {
-      toast.error('A senha deve ter pelo menos 8 caracteres.');
+    if (form.password.length < 4) {
+      toast.error('A senha deve ter pelo menos 4 caracteres.');
       return;
     }
 
@@ -131,10 +131,10 @@ export default function Register() {
           </div>
 
           <Input
-            label="Senha (mín. 8 caracteres)"
+            label="Senha (mín. 4 caracteres)"
             type="password"
             icon={Lock}
-            placeholder="••••••••"
+            placeholder="••••"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />

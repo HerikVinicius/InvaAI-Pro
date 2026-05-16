@@ -34,8 +34,8 @@ const register = async (req, res) => {
     if (!name || !username || !password) {
       return error(res, 'Nome, username e senha são obrigatórios.', 400);
     }
-    if (password.length < 8) {
-      return error(res, 'Senha deve ter pelo menos 8 caracteres.', 400);
+    if (password.length < 4) {
+      return error(res, 'Senha deve ter pelo menos 4 caracteres.', 400);
     }
 
     const normalized = normalizeUsername(username);

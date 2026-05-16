@@ -19,10 +19,10 @@ const VALIDATION = {
     length: 4,
   },
 
-  // Senha: mínimo 8 caracteres
+  // Senha: mínimo 4 caracteres
   PASSWORD: {
-    minLength: 8,
-    message: 'Senha deve ter pelo menos 8 caracteres.',
+    minLength: 4,
+    message: 'Senha deve ter pelo menos 4 caracteres.',
   },
 
   // Telefone: (00) 00000-0000

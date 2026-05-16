@@ -36,6 +36,9 @@ export default function VendedorFormModal({ open, onClose, vendedor, onSaved }) 
     }
   }, [open, vendedor]);
 
+  const usernameValid = !form.username || /^(?![._])(?!.*[._]$)[a-z0-9._]{3,30}$/.test(form.username);
+  const pinValid = /^\d{4}$/.test(form.password);
+
   const { submitting, handleSubmit } = useFormSubmit(
     async () => {
       if (!form.name?.trim()) throw new Error('Nome completo é obrigatório.');
@@ -59,7 +62,7 @@ export default function VendedorFormModal({ open, onClose, vendedor, onSaved }) 
         const usernameError = validateUsername(form.username);
         if (usernameError) throw new Error(usernameError);
 
-        const passwordError = validatePassword(form.password, form.role === 'gerente');
+        const passwordError = validatePassword(form.password, true);
         if (passwordError) throw new Error(passwordError);
 
         await api.post('/users', {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useFormSubmit } from '../../hooks/useFormSubmit';
-import { validateUsername, validatePassword, PIN_ROLES } from '../../constants/validation';
+import { validateUsername } from '../../constants/validation';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Modal from '../ui/Modal';
@@ -23,8 +23,7 @@ export default function CreateUserModal({ open, onClose, onSaved, tenants, isMas
       const usernameError = validateUsername(form.username);
       if (usernameError) throw new Error(usernameError);
 
-      const passwordError = validatePassword(form.password, PIN_ROLES.includes(form.role));
-      if (passwordError) throw new Error(passwordError);
+      if (form.password.length < 4) throw new Error('Senha deve ter no mínimo 4 caracteres.');
 
       if (!form.tenantId.trim()) throw new Error('Tenant é obrigatório.');
 
@@ -63,15 +62,10 @@ export default function CreateUserModal({ open, onClose, onSaved, tenants, isMas
         </div>
 
         <Input
-          label={PIN_ROLES.includes(form.role) ? 'PIN * (4 dígitos numéricos)' : 'Senha * (mínimo 8 caracteres)'}
-          type={PIN_ROLES.includes(form.role) ? 'text' : 'password'}
-          inputMode={PIN_ROLES.includes(form.role) ? 'numeric' : undefined}
-          maxLength={PIN_ROLES.includes(form.role) ? 4 : undefined}
+          label="Senha * (mínimo 4 caracteres)"
+          type="password"
           value={form.password}
-          onChange={(e) => {
-            const v = PIN_ROLES.includes(form.role) ? e.target.value.replace(/\D/g, '').slice(0, 4) : e.target.value;
-            setForm({ ...form, password: v });
-          }}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
 
         <div className="grid grid-cols-2 gap-3">
