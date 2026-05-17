@@ -1,10 +1,10 @@
-import { Search, HelpCircle, LogOut, Sun, Moon } from 'lucide-react';
+import { HelpCircle, LogOut, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import NotificationBell from '../NotificationBell';
 
-export default function Topbar({ searchPlaceholder = 'Pesquisar...', rightSlot }) {
+export default function Topbar({ rightSlot }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
@@ -16,15 +16,6 @@ export default function Topbar({ searchPlaceholder = 'Pesquisar...', rightSlot }
 
   return (
     <div className="h-[73px] border-b border-border bg-background flex items-center px-6 gap-4">
-      <div className="flex-1 max-w-2xl relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-        <input
-          type="text"
-          placeholder={searchPlaceholder}
-          className="w-full bg-surface border border-border rounded-md pl-9 pr-3 py-2 text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
-        />
-      </div>
-
       <div className="flex items-center gap-3 ml-auto">
         <NotificationBell />
 

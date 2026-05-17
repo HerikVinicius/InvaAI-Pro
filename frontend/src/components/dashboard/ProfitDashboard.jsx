@@ -3,7 +3,7 @@ import { TrendingUp, DollarSign, ShoppingCart, Percent } from 'lucide-react';
 const formatBRL = (value) =>
   (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 
-export default function ProfitDashboard({ profitDashboard }) {
+export default function ProfitDashboard({ profitDashboard, rangeLabel = '' }) {
   if (!profitDashboard) return null;
 
   const { faturamento, custoTotal, lucroLiquido, margemLucro } = profitDashboard;
@@ -17,7 +17,7 @@ export default function ProfitDashboard({ profitDashboard }) {
         <TrendingUp className="w-4 h-4 text-accent" />
         <span className="label-caps text-accent">Dashboard de Lucros</span>
         <span className="ml-auto text-xs text-text-muted bg-surface-elevated border border-border rounded px-2 py-0.5">
-          Acumulado
+          {rangeLabel || 'Mês atual'}
         </span>
       </div>
 

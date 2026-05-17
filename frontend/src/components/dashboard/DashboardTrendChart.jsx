@@ -5,11 +5,15 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tool
 const formatBRL = (value) =>
   (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 
-export default function DashboardTrendChart({ salesTrend = [] }) {
+export default function DashboardTrendChart({ salesTrend = [], range = null }) {
+  const title = range
+    ? `Tendência de Vendas — ${range.from} a ${range.to}`
+    : 'Tendência de Vendas — Últimos 6 Meses';
+
   return (
     <div className="lg:col-span-2 bg-surface border border-border rounded-lg p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">Tendência de Vendas — Últimos 6 Meses</h3>
+        <h3 className="text-sm font-semibold">{title}</h3>
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           <span className="w-2 h-2 rounded-full bg-accent" />
           Receita

@@ -4,7 +4,7 @@ import Badge from '../ui/Badge';
 const formatBRL = (value) =>
   (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 
-export default function DashboardMetrics({ sales = {}, inventory = {}, variacao = 0 }) {
+export default function DashboardMetrics({ sales = {}, inventory = {}, variacao = 0, rangeLabel = '' }) {
   const variacaoUp = variacao >= 0;
   const temVendas = (sales.quantidadeVendasTotal || 0) > 0;
 
@@ -20,6 +20,7 @@ export default function DashboardMetrics({ sales = {}, inventory = {}, variacao 
         </div>
         <div className="text-xs text-text-secondary mt-2">
           {sales.quantidadeVendasTotal || 0} venda{sales.quantidadeVendasTotal === 1 ? '' : 's'} concluída{sales.quantidadeVendasTotal === 1 ? '' : 's'}
+          {rangeLabel ? ` · ${rangeLabel}` : ''}
         </div>
       </div>
 
