@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Archive, Users, Sparkles, Settings, Menu, ShoppingCart, BarChart2, UserCog, Wallet, Receipt, UserCircle } from 'lucide-react';
+import { LayoutGrid, Archive, Users, Sparkles, Settings, Menu, ShoppingCart, BarChart2, UserCog, Wallet, Receipt, UserCircle, CalendarCheck } from 'lucide-react';
 import { useAuthStore, can } from '../../store/authStore';
 
 export default function Sidebar({ collapsed, onToggle }) {
@@ -17,6 +17,7 @@ export default function Sidebar({ collapsed, onToggle }) {
     { to: '/caixa',           label: 'Caixa',               icon: Wallet,       show: canCaixa },
     { to: '/historico-caixa', label: 'Histórico de Caixa',  icon: Receipt,      show: canCaixa },
     { to: '/sales',           label: 'Relatório de Vendas', icon: BarChart2,    roles: ['admin', 'master', 'lojista', 'vendedor', 'gerente'] },
+    { to: '/fechamento-mes',  label: 'Fechamento de Mês',  icon: CalendarCheck, roles: ['lojista'] },
     { to: '/ai-insights',     label: 'Insights de IA',      icon: Sparkles,     show: ['admin', 'master', 'lojista'].includes(user?.role) && user?.aiChatEnabled !== false },
     { to: '/users',           label: 'Usuários',            icon: UserCog,      roles: ['admin', 'master'] },
     { to: '/settings',        label: 'Configurações',       icon: Settings },

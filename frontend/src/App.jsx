@@ -18,6 +18,7 @@ import Pagamento from './pages/Pagamento';
 import Caixa from './pages/Caixa';
 import HistoricoCaixa from './pages/HistoricoCaixa';
 import Clientes from './pages/Clientes';
+import FechamentoMes from './pages/FechamentoMes';
 
 function RootRedirect() {
   const { user } = useAuthStore();
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/caixa"           element={<ProtectedRoute requirePermission="permitir_abrir_caixa"><Caixa /></ProtectedRoute>} />
             <Route path="/historico-caixa" element={<ProtectedRoute requirePermission="permitir_abrir_caixa"><HistoricoCaixa /></ProtectedRoute>} />
             <Route path="/clientes"        element={<ProtectedRoute requireRole={['admin', 'master', 'lojista']}><Clientes /></ProtectedRoute>} />
+            <Route path="/fechamento-mes"  element={<ProtectedRoute requireRole={['lojista']}><FechamentoMes /></ProtectedRoute>} />
             <Route path="/ai-insights"     element={<ProtectedRoute requireRole={['admin', 'master', 'lojista']} requireAiChat><AIInsights /></ProtectedRoute>} />
             <Route path="/settings"        element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/users"           element={<ProtectedRoute requireRole={['admin', 'master']}><Users /></ProtectedRoute>} />
