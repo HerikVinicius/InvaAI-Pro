@@ -1,7 +1,9 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { inventoryService } from '../services/inventoryService';
 import { useAuthStore, can } from '../store/authStore';
+
+const DEBOUNCE_MS = 350;
 
 export function useInventoryData(options = {}) {
   const { user } = useAuthStore();
@@ -10,9 +12,29 @@ export function useInventoryData(options = {}) {
   const [loading, setLoading] = useState(true);
   const [lowStock, setLowStock] = useState(false);
   const [noCostPrice, setNoCostPrice] = useState(false);
+  const [search, setSearch] = useState('');
+  const [warehouse, setWarehouse] = useState('');
+  const [warehouses, setWarehouses] = useState([]);
+
+  // Debounced search value — só dispara fetch após o usuário parar de digitar.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceTimer = useRef(null);
 
   const canWrite = can(user, 'permitir_cadastrar_produto');
   const isLojista = user?.role === 'lojista';
+
+  const handleSearchChange = useCallback((value) => {
+    setSearch(value);
+    clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setDebouncedSearch(value), DEBOUNCE_MS);
+  }, []);
+
+  // Busca armazéns disponíveis uma vez ao montar.
+  useEffect(() => {
+    inventoryService.warehouses()
+      .then((res) => setWarehouses(res.data.warehouses || []))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async (page = 1) => {
     setLoading(true);
@@ -20,6 +42,8 @@ export function useInventoryData(options = {}) {
       const params = { page, limit: 20 };
       if (lowStock) params.lowStock = 'true';
       if (noCostPrice) params.noCostPrice = 'true';
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (warehouse) params.warehouse = warehouse;
       const res = await inventoryService.list(params);
       setProducts(res.data.products);
       setPagination(res.data.pagination);
@@ -28,7 +52,7 @@ export function useInventoryData(options = {}) {
     } finally {
       setLoading(false);
     }
-  }, [lowStock, noCostPrice]);
+  }, [lowStock, noCostPrice, debouncedSearch, warehouse]);
 
   useEffect(() => {
     load(1);
@@ -39,6 +63,13 @@ export function useInventoryData(options = {}) {
   }, [products]);
 
   const reload = useCallback((page = 1) => load(page), [load]);
+
+  const clearFilters = useCallback(() => {
+    setLowStock(false);
+    setNoCostPrice(false);
+    setWarehouse('');
+    handleSearchChange('');
+  }, [handleSearchChange]);
 
   return {
     products,
@@ -51,6 +82,12 @@ export function useInventoryData(options = {}) {
     setLowStock,
     noCostPrice,
     setNoCostPrice,
+    search,
+    setSearch: handleSearchChange,
+    warehouse,
+    setWarehouse,
+    warehouses,
+    clearFilters,
     reload,
   };
 }

@@ -1,4 +1,4 @@
-import { Plus, Upload, AlertTriangle, Printer, Tag } from 'lucide-react';
+import { Plus, Upload, AlertTriangle, Printer, Tag, Search, Warehouse, X } from 'lucide-react';
 import Button from '../../ui/Button';
 import InventorySummary from '../components/InventorySummary';
 import InventoryTable from '../components/InventoryTable';
@@ -12,8 +12,14 @@ export default function InventoryPage({
   criticalCount,
   lowStock,
   noCostPrice,
+  search,
+  warehouse,
+  warehouses,
   onLowStockToggle,
   onNoCostPriceToggle,
+  onSearchChange,
+  onWarehouseChange,
+  onClearFilters,
   onPrint,
   onCreateClick,
   onEditClick,
@@ -21,6 +27,8 @@ export default function InventoryPage({
   onImportClick,
   onPageChange,
 }) {
+  const hasActiveFilter = lowStock || noCostPrice || search || warehouse;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between print:hidden">
@@ -48,10 +56,52 @@ export default function InventoryPage({
         <InventorySummary
           total={pagination.total}
           criticalCount={criticalCount}
+          warehouse={warehouse}
         />
       </div>
 
-      {/* Barra de filtros e ações */}
+      {/* Barra de pesquisa + armazém */}
+      <div className="flex items-center gap-3 flex-wrap print:hidden">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Buscar por nome ou código..."
+            className="w-full bg-surface border border-border rounded-md pl-9 pr-3 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+          />
+          {search && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Filtro de armazém */}
+        <div className="relative">
+          <Warehouse className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
+          <select
+            value={warehouse}
+            onChange={(e) => onWarehouseChange(e.target.value)}
+            className={`appearance-none bg-surface border rounded-md pl-9 pr-7 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent transition-colors ${
+              warehouse
+                ? 'border-accent/50 text-text-primary'
+                : 'border-border text-text-secondary'
+            }`}
+          >
+            <option value="">Todos os armazéns</option>
+            {warehouses.map((w) => (
+              <option key={w} value={w}>{w}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Filtros de toggle + ações */}
       <div className="flex items-center gap-3 flex-wrap print:hidden">
         <button
           onClick={onLowStockToggle}
@@ -89,6 +139,16 @@ export default function InventoryPage({
           </button>
         )}
 
+        {hasActiveFilter && (
+          <button
+            onClick={onClearFilters}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-text-muted hover:text-text-primary transition-colors"
+          >
+            <X className="w-3 h-3" />
+            Limpar filtros
+          </button>
+        )}
+
         <button
           onClick={onPrint}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-surface text-text-secondary hover:text-accent hover:border-accent/40 text-sm font-medium transition-colors ml-auto"
@@ -101,7 +161,9 @@ export default function InventoryPage({
       {/* Cabeçalho visível apenas na impressão */}
       <div className="hidden print:block mb-4">
         <h1 className="text-lg font-bold">
-          Relatório de Estoque{lowStock ? ' — Produtos Esgotando' : noCostPrice ? ' — Sem Preço de Custo' : ''}
+          Relatório de Estoque
+          {lowStock ? ' — Produtos Esgotando' : noCostPrice ? ' — Sem Preço de Custo' : ''}
+          {warehouse ? ` — Armazém: ${warehouse}` : ''}
         </h1>
         <p className="text-xs text-gray-500">
           Gerado em {new Date().toLocaleString('pt-BR')} · {pagination.total} produto(s)

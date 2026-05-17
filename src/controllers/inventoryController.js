@@ -33,6 +33,7 @@ const getInventory = async (req, res) => {
     }
 
     if (req.query.category) filter.category = new RegExp(req.query.category, 'i');
+    if (req.query.warehouse) filter.warehouseLocation = new RegExp(`^${req.query.warehouse}$`, 'i');
 
     const orClauses = [];
     if (req.query.noCostPrice === 'true' && canSeeCost(req)) {
@@ -317,6 +318,17 @@ const getProductLogs = async (req, res) => {
   }
 };
 
+const getWarehouses = async (req, res) => {
+  try {
+    const TenantProduct = getTenantProductModel(req);
+    const warehouses = await TenantProduct.distinct('warehouseLocation', { isActive: true, warehouseLocation: { $exists: true, $ne: '' } });
+    return success(res, { warehouses: warehouses.filter(Boolean).sort() });
+  } catch (err) {
+    console.error('[InventoryController] getWarehouses error:', err.message);
+    return error(res, 'Falha ao buscar armazéns.', 500);
+  }
+};
+
 module.exports = {
   getInventory,
   addProduct,
@@ -326,4 +338,5 @@ module.exports = {
   searchProducts,
   getInventoryLogs,
   getProductLogs,
+  getWarehouses,
 };

@@ -4,6 +4,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Tema escuro (padrão) ── */
+:root {
+  --color-background:        #09090b;
+  --color-surface:           #121214;
+  --color-surface-hover:     #1a1a1d;
+  --color-surface-elevated:  #1f1f23;
+  --color-border:            #27272a;
+  --color-border-subtle:     #1f1f23;
+  --color-text-primary:      #dde4dd;
+  --color-text-secondary:    #a1a1aa;
+  --color-text-muted:        #71717a;
+}
+
+/* ── Tema claro ── */
+html.light {
+  --color-background:        #f4f4f5;
+  --color-surface:           #ffffff;
+  --color-surface-hover:     #f1f5f1;
+  --color-surface-elevated:  #e4e4e7;
+  --color-border:            #d4d4d8;
+  --color-border-subtle:     #e4e4e7;
+  --color-text-primary:      #18181b;
+  --color-text-secondary:    #52525b;
+  --color-text-muted:        #71717a;
+}
+
 @layer base {
   html, body, #root {
     height: 100%;

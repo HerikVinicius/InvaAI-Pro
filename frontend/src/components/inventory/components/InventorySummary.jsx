@@ -14,10 +14,10 @@ function FilterCard({ label, value, icon: Icon, alert, mono }) {
   );
 }
 
-export default function InventorySummary({ total, criticalCount }) {
+export default function InventorySummary({ total, criticalCount, warehouse }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <FilterCard label="Local do Armazém" value="Banco Principal" />
+      <FilterCard label="Local do Armazém" value={warehouse || 'Banco Principal'} />
       <FilterCard label="Status do Estoque" value="Todos os Status" />
       <FilterCard label="Total de SKU" value={total.toLocaleString()} icon={Boxes} mono />
       <FilterCard label="Alertas Críticos" value={`${criticalCount} Itens`} icon={AlertTriangle} alert mono />

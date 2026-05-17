@@ -1,11 +1,13 @@
-import { Search, HelpCircle, LogOut } from 'lucide-react';
+import { Search, HelpCircle, LogOut, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../hooks/useTheme';
 import NotificationBell from '../NotificationBell';
 
 export default function Topbar({ searchPlaceholder = 'Pesquisar...', rightSlot }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { theme, toggle } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -25,6 +27,19 @@ export default function Topbar({ searchPlaceholder = 'Pesquisar...', rightSlot }
 
       <div className="flex items-center gap-3 ml-auto">
         <NotificationBell />
+
+        <button
+          onClick={toggle}
+          className="p-2 text-text-muted hover:text-text-primary transition-colors rounded-md hover:bg-surface-hover"
+          aria-label={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+          title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
+        >
+          {theme === 'dark'
+            ? <Sun className="w-4 h-4" />
+            : <Moon className="w-4 h-4" />
+          }
+        </button>
+
         <button className="p-2 text-text-muted hover:text-text-primary transition-colors" aria-label="Ajuda">
           <HelpCircle className="w-4 h-4" />
         </button>

@@ -10,6 +10,7 @@ const {
   searchProducts,
   getInventoryLogs,
   getProductLogs,
+  getWarehouses,
 } = require('../controllers/inventoryController');
 const { importProducts, parseFile, commitImport, debugParsePdf } = require('../controllers/importController');
 const { protect, authorize, checkPermission } = require('../middlewares/auth');
@@ -24,6 +25,7 @@ router.use(protect);
 router.get('/logs', checkPermission('permitir_cadastrar_produto'), getInventoryLogs);
 
 router.get('/', getInventory);
+router.get('/warehouses', getWarehouses);
 router.get('/search', searchProducts);
 router.get('/sku/:sku', getProductBySku);
 
