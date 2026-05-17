@@ -609,7 +609,7 @@ const getProdutosMaisVendidosPorVendedor = async (req, res) => {
 
 const getStats = async (req, res) => {
   try {
-    const { Sale: TenantSale } = getModels(req);
+    const { Sale: TenantSale, Product: TenantProduct } = getModels(req);
     const range = parseDateRange(req);
 
     // Cumulative "total" doesn't depend on the range — it's the lifetime total.
@@ -655,17 +655,12 @@ const getStats = async (req, res) => {
       anteriorLabel = 'mesPassado';
     }
 
-    // Lucro estimado: apenas lojista recebe este dado.
-    // Faz lookup no Product para pegar purchasePrice atual de cada item.
     let lucroPromise = Promise.resolve([]);
     if (req.user?.role === 'lojista') {
-      const { Product: TenantProduct } = getModels(req);
+      const now = new Date();
       const lucroMatch = range
         ? { status: 'CONCLUIDA', createdAt: { $gte: range.from, $lte: range.to } }
-        : (() => {
-            const now = new Date();
-            return { status: 'CONCLUIDA', createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) } };
-          })();
+        : { status: 'CONCLUIDA', createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) } };
       lucroPromise = TenantSale.aggregate([
         { $match: lucroMatch },
         { $unwind: '$items' },

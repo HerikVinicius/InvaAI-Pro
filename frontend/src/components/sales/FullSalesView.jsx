@@ -1,5 +1,6 @@
 import { RefreshCw, TrendingUp } from 'lucide-react';
 import { useSalesData } from '../../hooks/useSalesData';
+import { format } from '../../utils/format';
 import DateRangePicker from './DateRangePicker';
 import SalesMetricsCards from './components/SalesMetricsCards';
 import SalesTrendChart from './components/SalesTrendChart';
@@ -7,9 +8,6 @@ import SalesPaymentBreakdown from './components/SalesPaymentBreakdown';
 import SalesRecentList from './components/SalesRecentList';
 import SalesVendorRanking from './components/SalesVendorRanking';
 import { SkeletonCard } from '../ui/Skeleton';
-
-const formatBRL = (v) =>
-  (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 
 export default function FullSalesView() {
   const {
@@ -99,7 +97,7 @@ export default function FullSalesView() {
         trend={trend}
       />
 
-      {lucroEstimado !== null && lucroEstimado !== undefined && (
+      {lucroEstimado != null && (
         <div className="bg-surface border border-emerald-500/30 rounded-xl p-5 flex items-center gap-5">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
             <TrendingUp className="w-5 h-5 text-emerald-400" />
@@ -107,7 +105,7 @@ export default function FullSalesView() {
           <div className="flex-1 min-w-0">
             <div className="label-caps text-emerald-400">Lucro Estimado</div>
             <div className="font-mono text-2xl font-bold text-emerald-400 mt-0.5">
-              {formatBRL(lucroEstimado)}
+              {format.currency(lucroEstimado)}
             </div>
             <div className="text-xs text-text-secondary mt-1">
               {range ? 'Lucro bruto no período selecionado' : 'Lucro bruto no mês atual'} · baseado no preço de custo dos produtos
@@ -117,7 +115,7 @@ export default function FullSalesView() {
             <div className="flex-shrink-0 text-right">
               <div className="text-xs text-text-muted">Margem</div>
               <div className="font-mono text-lg font-semibold text-emerald-400">
-                {receitaTotal > 0 ? Math.round((lucroEstimado / receitaTotal) * 100) : 0}%
+                {Math.round((lucroEstimado / receitaTotal) * 100)}%
               </div>
             </div>
           )}

@@ -14,12 +14,12 @@ export function useInventoryData(options = {}) {
   const canWrite = can(user, 'permitir_cadastrar_produto');
   const isLojista = user?.role === 'lojista';
 
-  const load = useCallback(async (page = 1, currentLowStock = false, currentNoCostPrice = false) => {
+  const load = useCallback(async (page = 1) => {
     setLoading(true);
     try {
       const params = { page, limit: 20 };
-      if (currentLowStock) params.lowStock = 'true';
-      if (currentNoCostPrice) params.noCostPrice = 'true';
+      if (lowStock) params.lowStock = 'true';
+      if (noCostPrice) params.noCostPrice = 'true';
       const res = await inventoryService.list(params);
       setProducts(res.data.products);
       setPagination(res.data.pagination);
@@ -28,17 +28,17 @@ export function useInventoryData(options = {}) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lowStock, noCostPrice]);
 
   useEffect(() => {
-    load(1, lowStock, noCostPrice);
-  }, [load, lowStock, noCostPrice]);
+    load(1);
+  }, [load]);
 
   const criticalCount = useMemo(() => {
     return products.filter(p => p.status === 'CRITICAL').length;
   }, [products]);
 
-  const reload = useCallback((page = 1) => load(page, lowStock, noCostPrice), [load, lowStock, noCostPrice]);
+  const reload = useCallback((page = 1) => load(page), [load]);
 
   return {
     products,

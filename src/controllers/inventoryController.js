@@ -32,22 +32,20 @@ const getInventory = async (req, res) => {
       filter.status = req.query.status.toUpperCase();
     }
 
-    // noCostPrice=true retorna apenas produtos sem preço de custo (lojista only).
-    if (req.query.noCostPrice === 'true' && canSeeCost(req)) {
-      filter.$or = [
-        { purchasePrice: { $exists: false } },
-        { purchasePrice: null },
-        { purchasePrice: 0 },
-      ];
-    }
-
     if (req.query.category) filter.category = new RegExp(req.query.category, 'i');
+
+    const orClauses = [];
+    if (req.query.noCostPrice === 'true' && canSeeCost(req)) {
+      orClauses.push([{ purchasePrice: 0 }]);
+    }
     if (req.query.search) {
-      filter.$or = [
+      orClauses.push([
         { name: new RegExp(req.query.search, 'i') },
         { sku: new RegExp(req.query.search, 'i') },
-      ];
+      ]);
     }
+    if (orClauses.length === 1) filter.$or = orClauses[0];
+    if (orClauses.length === 2) filter.$and = orClauses.map((c) => ({ $or: c }));
 
     const TenantProduct = getTenantProductModel(req);
     const projection = canSeeCost(req) ? null : COST_FIELDS_PROJECTION;
